@@ -5,7 +5,8 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Prüfung | Erwartetes Ergebnis |
 | --- | --- |
 | SPK manuell installieren | Paket-Zentrum akzeptiert die Architektur und Mindestversion; keine Root-Privilege-Meldung. |
-| Installierte CGI-Rechte prüfen | `ui/api.cgi` gehört dem SynoWake-Paketkonto und hat Modus `4755`; `bin/synowake` bleibt `0755`. Keine der Dateien ist Setuid auf Root. |
+| Installierte Programmrechte prüfen | `ui/api.cgi` und `bin/synowake` haben Modus `0755`; keine Setuid-/Setgid-Bits und keine zusätzlichen Ausführungsprivilegien. |
+| Paketdienst prüfen | Dienst läuft unter dem SynoWake-Paketkonto; `target/run/backend.sock` existiert und `bin/synowake status` liefert 0. |
 | Paket starten und öffnen | Eigenes DSM-Fenster zeigt Gerätekacheln, Geräteliste und Automatik. |
 | Zugriff ohne DSM-Anmeldung | `api.cgi` verweigert Daten und Wake-Aktionen. |
 | Zugriff als normaler DSM-Benutzer | Backend verweigert die Administrationsfunktionen. |
@@ -37,7 +38,7 @@ Das sichtbare Fehlerbild, die DSM-Version, die Uhrzeit und die Aktion festhalten
 
 Bei einer Aufgabenplaner-WebAPI-Meldung den Fehlercode und die Methode erfassen. Den betreffenden Zeitplan auch direkt im DSM-Aufgabenplaner kontrollieren. Eine fehlgeschlagene Registrierung bleibt ein Fehler; den Zeitplan nicht als funktionierend abnehmen.
 
-Wenn das native Fenster leer bleibt, zunächst die direkte UI-Adresse nach DSM-Anmeldung öffnen. Wenn die direkte Oberfläche funktioniert, liegt der Fehler bei der DSM-Fensterregistrierung. Wenn auch `api.cgi` fehlschlägt, CGI-Ausführbarkeit, Paketidentität und Authentifizierungsprüfung untersuchen.
+Wenn das native Fenster leer bleibt, zunächst die direkte UI-Adresse nach DSM-Anmeldung öffnen. Wenn die direkte Oberfläche funktioniert, liegt der Fehler bei der DSM-Fensterregistrierung. Wenn auch `api.cgi` fehlschlägt, Dienststatus, `/var/packages/SynoWake/var/service.log`, CGI-Ausführbarkeit und Authentifizierungsprüfung untersuchen. Die CGI-Weiterleitung muss den Socket erreichen, darf aber keine privaten Datendateien benötigen.
 
 Wenn die Wake-Aktion im eigenen Verlauf erscheint, aber nicht im Protokoll-Center, die Diagnose für `synologset1` prüfen. Im Protokoll-Center zunächst ein Archivziel wählen und einen **BSD/TCP**-Empfänger erstellen. Dessen Port in SynoWake einstellen. Für den Loopback-Sender kein SSL aktivieren. Eine neue Aktion ausführen und die Log-Center-Anzeige prüfen. Nach Beheben des Empfängers vorgemerkte Einträge erneut senden. Ein erfolgreicher TCP-Versand bestätigt noch keinen Datenbankeintrag; diese Sichtprüfung ist Teil der Abnahme.
 

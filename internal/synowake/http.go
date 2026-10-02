@@ -33,8 +33,9 @@ func authenticate(r *http.Request) (string, error) {
 		if _, err := os.Stat(path); err != nil {
 			continue
 		}
-		// The DSM CGI process already supplies cookie, address and SynoToken variables.
-		output, err := runCommand(path)
+		// Build a separate CGI environment for each request. The package service
+		// handles concurrent users and must never reuse process-wide HTTP values.
+		output, err := runAuthenticationCommand(path, r)
 		if err != nil {
 			continue
 		}
@@ -95,12 +96,13 @@ func commandFor(s savedSchedule) string {
 	return strings.Join(args, " ")
 }
 func callbackFor(r *http.Request) string {
-	port := os.Getenv("SERVER_PORT")
+	meta, _ := r.Context().Value(gatewayContextKey{}).(gatewayContext)
+	port := meta.ServerPort
 	if _, err := strconv.Atoi(port); err != nil {
 		_, port, _ = net.SplitHostPort(r.Host)
 	}
 	scheme := "http"
-	if os.Getenv("HTTPS") == "on" || r.TLS != nil || r.URL.Scheme == "https" || port == "5001" {
+	if meta.Scheme == "https" || r.TLS != nil || r.URL.Scheme == "https" || port == "5001" {
 		scheme = "https"
 	}
 	if port == "" {
@@ -176,7 +178,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			for _, p := range s.Pending {
 				pendingPlans = append(pendingPlans, scheduleView{p.Schedule, commandFor(p), true})
 			}
-			writeJSON(w, 200, map[string]any{"user": user, "csrf": csrfFor(s, user, r), "devices": s.Devices, "schedules": plans, "pendingSchedules": pendingPlans, "logs": s.Logs, "diagnostics": s.Diagnostics, "active": s.Active, "settings": map[string]int{"logCenterPort": s.LogCenterPort}}, nil)
+			writeJSON(w, 200, map[string]any{"user": user, "version": PackageVersion, "csrf": csrfFor(s, user, r), "devices": s.Devices, "schedules": plans, "pendingSchedules": pendingPlans, "logs": s.Logs, "diagnostics": s.Diagnostics, "active": s.Active, "settings": map[string]int{"logCenterPort": s.LogCenterPort}}, nil)
 		case "status":
 			a.statusHTTP(w, s)
 		default:

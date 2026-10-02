@@ -3,9 +3,29 @@ set -eu
 SYNOWAKE_PKGDEST="${SYNOPKG_PKGDEST:-/var/packages/SynoWake/target}"
 SYNOWAKE_VAR="${SYNOPKG_PKGVAR:-/var/packages/SynoWake/var}"
 export SYNOWAKE_PKGDEST SYNOWAKE_VAR
+SYNOWAKE_SOCKET="$SYNOWAKE_PKGDEST/run/backend.sock"
+export SYNOWAKE_SOCKET
 
 case "${1:-}" in
-    start|stop|status)
+    start)
+        "$SYNOWAKE_PKGDEST/bin/synowake" start
+        if "$SYNOWAKE_PKGDEST/bin/synowake" status >/dev/null 2>&1; then
+            exit 0
+        fi
+        "$SYNOWAKE_PKGDEST/bin/synowake" --serve >> "$SYNOWAKE_VAR/service.log" 2>&1 &
+        count=0
+        while [ "$count" -lt 15 ]; do
+            if "$SYNOWAKE_PKGDEST/bin/synowake" status >/dev/null 2>&1; then
+                exit 0
+            fi
+            count=$((count + 1))
+            sleep 1
+        done
+        "$SYNOWAKE_PKGDEST/bin/synowake" stop >/dev/null 2>&1 || true
+        echo "SynoWake service failed to start; inspect $SYNOWAKE_VAR/service.log" >&2
+        exit 1
+        ;;
+    stop|status)
         exec "$SYNOWAKE_PKGDEST/bin/synowake" "$1"
         ;;
     prestart|prestop)

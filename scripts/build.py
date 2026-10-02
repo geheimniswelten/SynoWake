@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build a reproducible, unsigned DSM 7.1 SPK using only Python's stdlib.
 
-The package contains one static Linux/amd64 Go binary in two roles: a CGI
-endpoint owned by the DSM package account and a Task Scheduler CLI client.
+One static Linux/amd64 Go binary provides the package service, an unprivileged
+CGI relay and the Task Scheduler/lifecycle CLI.
 """
 
 from __future__ import annotations
@@ -151,6 +151,9 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     binary = binary_path.read_bytes()
     check_binary(binary)
     package_root = ROOT / "package"
+    privilege = json.loads(normalized(package_root / "conf" / "privilege"))
+    if privilege != {"defaults": {"run-as": "package"}}:
+        raise ValueError("SynoWake must use package privileges only: no executable/tool overrides, setuid or capabilities")
     ui_root = ROOT / "ui"
     for required in (ui_root / "index.html", ui_root / "app.js", ui_root / "style.css", ui_root / "scheduler.js"):
         if not required.is_file():
@@ -169,6 +172,7 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
                 payload[name] = (content, 0o644)
     payload["ui/api.cgi"] = (binary, 0o755)
     payload["bin/synowake"] = (binary, 0o755)
+    payload["run/.keep"] = (b"", 0o644)
     for size in (16, 24, 32, 48, 64, 72, 128, 256):
         payload[f"ui/images/icon_{size}.png"] = (icon_png(size), 0o644)
     compressed = gzip_bytes(tar_bytes(payload))

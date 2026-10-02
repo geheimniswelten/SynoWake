@@ -5,12 +5,13 @@
 ```text
 SynoWake.spk
   INFO                         Paketkennung, apollolake, DSM-Mindestversion
-  conf/privilege               Paketkonto; CGI-Datei mit Paketidentität
+  conf/privilege               ausschließlich defaults.run-as: package
   conf/resource                DSM-Benachrichtigungstexte
   scripts/                     init/start/stop/status
   package.tgz
-    bin/synowake               CLI für DSM-Aufgabenplaner und Paketlebenszyklus
-    ui/api.cgi                 dieselbe statische Go-Binary als CGI
+    bin/synowake               Paketdienst und CLI für Aufgabenplaner/Lebenszyklus
+    ui/api.cgi                 dieselbe Binary als unprivilegierte Weiterleitung
+    run/backend.sock           zur Laufzeit erzeugter lokaler Unix-Socket
     ui/index.html              Browseroberfläche
     ui/app.js
     ui/scheduler.js            DSM-TaskScheduler-Client im Browser
@@ -21,23 +22,25 @@ SynoWake.spk
     ui/texts/                  deutsche und englische Benachrichtigungstexte
 ```
 
-Es läuft kein zusätzlicher Webserver und kein eigener Cron-Daemon. DSM stellt die Dateien über `dsmuidir="ui"` unter `/webman/3rdparty/SynoWake/` bereit und startet den CGI-Endpunkt pro Anfrage. `start` und `stop` verwalten den Aktivzustand; `status` liefert 0 für aktiv und 3 für gestoppt.
+DSM stellt die Dateien über `dsmuidir="ui"` unter `/webman/3rdparty/SynoWake/` bereit und startet den CGI-Endpunkt pro Anfrage. Ein dauerhafter Paketdienst nimmt dessen Weiterleitungen über einen Unix-Socket entgegen. Er öffnet keinen TCP-Empfangsport. Der CGI-Endpunkt greift nicht auf Paketdaten zu. Das Startskript startet den Dienst unter dem Paketkonto und wartet auf eine erfolgreiche Zustandsprüfung. `stop` setzt den Aktivzustand zurück und beendet den Dienst über eine mit einem privaten Schlüssel geschützte Steueranfrage. `status` liefert 0 für aktiv und erreichbar, andernfalls 3. DSM bleibt für die Zeitplanung zuständig.
 
-Die private Datenablage liegt im DSM-Paketverzeichnis `var`, außerhalb des UI-Verzeichnisses. Speichern verwendet eine Dateisperre und atomaren Austausch, damit parallel laufende CGI-Anfragen denselben Datenbestand bearbeiten können. Der Zustand für angemeldete Administratoren enthält den Aufgabenbefehl mit dem jeweiligen Zeitplan-Schlüssel, damit die Anwendung ihre DSM-Aufgabe eindeutig prüfen und eine unterbrochene Registrierung wiederaufnehmen kann. Der Schlüssel erscheint auch im DSM-Aufgabenskript. Es gibt kein zusätzliches Geheimnisfeld im Oberflächenzustand; die Anwendung zeigt Schlüssel nicht im DOM an und schreibt sie nicht in das Ausführungsprotokoll.
+Die private Datenablage liegt im DSM-Paketverzeichnis `var`, außerhalb des UI-Verzeichnisses. Speichern verwendet eine Dateisperre und atomaren Austausch, damit parallele Dienstanfragen und Lebenszyklusbefehle denselben Datenbestand bearbeiten können. Der Zustand für angemeldete Administratoren enthält den Aufgabenbefehl mit dem jeweiligen Zeitplan-Schlüssel, damit die Anwendung ihre DSM-Aufgabe eindeutig prüfen und eine unterbrochene Registrierung wiederaufnehmen kann. Der Schlüssel erscheint auch im DSM-Aufgabenskript. Es gibt kein zusätzliches Geheimnisfeld im Oberflächenzustand; die Anwendung zeigt Schlüssel nicht im DOM an und schreibt sie nicht in das Ausführungsprotokoll.
 
 ## Aufgabenplaner
 
 Die administrativ angemeldete Browseroberfläche verwendet `SYNO.Core.TaskScheduler` über den WebAPI-Endpunkt der vorhandenen DSM-Sitzung. DSM übernimmt Registrierung, Aktivierung und Zeitsteuerung. Das Paket installiert weder statische Aufgaben über `task_config.xml` noch direkten Inhalt in `/etc/crontab`.
 
-Geplante Aufgaben starten das CLI mit Zeitplan-ID, Geheimnis und lokalem Callback. Das CLI beschränkt den Callback auf Loopback und die bekannte CGI-Adresse. Der CGI prüft Geheimnis, Aktivzustand und Zeitplan, bevor es ein Magic Packet sendet. Normale CGI-Anfragen benötigen eine gültige DSM-Administratorsitzung. Die DSM-Anmeldung wird über den dokumentierten `authenticate.cgi` geprüft; schreibende Browseranfragen benötigen zusätzlich den Anwendungs-CSRF-Schutz.
+Geplante Aufgaben starten das CLI mit Zeitplan-ID, Geheimnis und lokalem Callback. Das CLI beschränkt den Callback auf Loopback und die bekannte CGI-Adresse. Die CGI-Weiterleitung übermittelt den ursprünglichen Anfragekontext an den Dienst. Dieser prüft Loopback-Adresse, Geheimnis, Aktivzustand und Zeitplan, bevor er ein Magic Packet sendet. Normale Browseranfragen benötigen eine gültige DSM-Administratorsitzung. Die DSM-Anmeldung wird über den dokumentierten `authenticate.cgi` geprüft; schreibende Browseranfragen benötigen zusätzlich den Anwendungs-CSRF-Schutz.
 
 Die WebAPI-Version und Felder des Aufgabenplaners sind nicht Teil einer stabilen öffentlichen Schnittstellenzusage. Zu prüfende Punkte sind die auf DSM 7.1 verfügbaren Methoden, das Zeitplanobjekt, Tasks des angemeldeten Benutzers und Antworten beim Editieren. Ein API-Fehler muss in der Oberfläche sichtbar bleiben. Eine nur lokal gespeicherte Konfiguration darf nicht als registrierter DSM-Zeitplan erscheinen.
 
 ## Berechtigungen
 
-`conf/privilege` verwendet `run-as: package`. Die CGI-Datei wird dieser Identität zugeordnet. Zusätzlich setzt die dokumentierte `tool`-Konfiguration `ui/api.cgi` auf Besitzer/Gruppe `package` und Modus `4755`. Das Setuid-Bit gibt dem ELF-Programm die effektive Identität des **SynoWake-Paketkontos**, damit die private Dateiablage unabhängig von der DSM-CGI-Dispatcheridentität erreichbar bleibt. Es gibt keine Root-Lebenszyklusskripte und keine Änderung von Systemgruppen. Das reguläre CLI `bin/synowake` bleibt `0755`.
+`conf/privilege` enthält nur `defaults.run-as: package`. Dadurch startet DSM die Lebenszyklusskripte und den Dienst unter dem Paketkonto. Die Binärdateien haben Modus `0755`. Es gibt keine `executable`- oder `tool`-Einträge, keine Setuid-/Setgid-Bits, keine Datei-Capabilities und keine Änderungen von Systemgruppen. Der Builder weist abweichende Privilegienkonfigurationen zurück.
 
-Bei einer Ausführung mit abweichender effektiver UID sind reine CLI-Aufrufe gesperrt. CGI-Datenpfad und Suchpfad für Systemprogramme sind festgelegt; ein fremder Umgebungswert darf den CGI-Datenpfad nicht überschreiben. HTTP-Anfragen benötigen weiterhin DSM-Authentifizierung oder den lokalen Zeitplan-Schlüssel. UDP-Broadcast benötigt keinen privilegierten Port. Die DSM-Annahme des Paketkonto-Setuid-Modus sowie die Verfügbarkeit von `ping`, Authentifizierungsprüfung, `synologset1` und `synodsmnotify` werden auf der NAS geprüft.
+Der Dienst hält den Socket unter `target/run/backend.sock`; das Verzeichnis gehört dem Paketkonto und hat Modus `0755`. Der Socket erlaubt der normalen DSM-CGI-Identität eine lokale Verbindung. Diese Verbindung ersetzt keine Anmeldung: Datenzugriffe benötigen weiterhin eine geprüfte DSM-Administratorsitzung und schreibende Anfragen einen sitzungsgebundenen CSRF-Schlüssel. Geplante Wake-Aufrufe benötigen ihren individuellen Schlüssel und eine ursprüngliche Loopback-Adresse. Steueraufrufe zum Stoppen benötigen das private Paketgeheimnis und sind über die CGI-Weiterleitung nicht erreichbar. Eine zusätzliche Dateisperre verhindert mehrere gleichzeitig laufende Dienste.
+
+Die CGI-Weiterleitung übernimmt Cookie, SynoToken, Client-/Serveradresse, Port und Protokoll aus der tatsächlichen Anfrage. Vom Browser gelieferte Weiterleitungsmetadaten werden ersetzt. Der Dienst erzeugt für jeden Aufruf von `authenticate.cgi` eine eigene Umgebung; parallele Sitzungen teilen keine Cookie- oder Tokenvariablen. Der CGI-Prozess öffnet keine Datendateien. Bei einem fehlenden Dienst liefert er einen sichtbaren Fehler.
 
 Die Ausführbarkeit von `authenticate.cgi` und die CGI-Benutzeridentität sind DSM-spezifisch. Falls DSM die Authentifizierungsprüfung unter dem Paketkonto nicht erlaubt, muss der Zugriff gesperrt bleiben. Zum Beheben die DSM-Anbindung untersuchen; nicht die Prüfung umgehen oder das Programm als Root betreiben.
 

@@ -4,7 +4,7 @@ Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Der Paketname u
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
-**Status: erste Beta, Zielsystemprüfung erforderlich.** Das Paket lässt sich lokal bauen und prüfen. Eine erfolgreiche Installation auf einer DS918+ und die DSM-internen Integrationen können erst an der tatsächlichen NAS bestätigt werden. Besonders Aufgabenplaner, CGI-Berechtigungen, DSM-Fenster, Protokoll-Center und Benachrichtigungen gehören zur Abnahme.
+**Version 0.1.1-0002: korrigierte Beta, Zielsystemprüfung erforderlich.** Der Paketdienst verwendet ausschließlich das Paketkonto. Die CGI-Weiterleitung benötigt keine erhöhten Ausführungsrechte. Eine erfolgreiche Installation auf einer DS918+ und die DSM-internen Integrationen können erst an der tatsächlichen NAS bestätigt werden. Aufgabenplaner, Dienststart, DSM-Fenster, Protokoll-Center und Benachrichtigungen gehören zur Abnahme.
 
 ## Paket bauen
 
@@ -48,9 +48,9 @@ Schlafende Geräte, entfernte VLANs und Hosts ohne verwertbaren Nachbartabellene
 
 Zeitpläne erscheinen zusätzlich im DSM-Aufgabenplaner als SynoWake-Aufgaben. Erstellen, Bearbeiten und Löschen benötigt eine laufende DSM-Administratorsitzung. Die Browseroberfläche verwendet die interne Aufgabenplaner-WebAPI; Passwörter werden dabei nicht in SynoWake gespeichert.
 
-Aufgaben rufen das mitgelieferte CLI auf, das eine auf den lokalen DSM-Endpunkt begrenzte Anfrage an den CGI-Dienst sendet. Jeder Zeitplan erhält ein eigenes Geheimnis. Paketdaten liegen privat unter `/var/packages/SynoWake/var`; die ausführbaren Dateien liegen unter `/var/packages/SynoWake/target`. Paket-Skripte laufen mit dem Paketkonto, ohne Root-Freigabe. Nur der kompilierte CGI-Endpunkt erhält über die offizielle `tool`-Konfiguration Setuid auf das **Paketkonto SynoWake**, damit er dessen private Daten erreicht. Er erhält keine Root-Identität und akzeptiert keine erhöhten CLI-Lebenszyklusaufrufe.
+Aufgaben rufen das mitgelieferte CLI auf, das eine auf den lokalen DSM-Endpunkt begrenzte Anfrage an den CGI-Endpunkt sendet. Dieser leitet sie über einen lokalen Unix-Socket an den Paketdienst weiter. Jeder Zeitplan erhält ein eigenes Geheimnis. Der Dienst und die Lebenszyklusbefehle lesen und schreiben die privaten Daten in `/var/packages/SynoWake/var` unter dem Paketkonto; ausführbare Dateien liegen unter `/var/packages/SynoWake/target`. Die Berechtigungskonfiguration enthält ausschließlich `defaults.run-as: package`. Alle Programmdateien haben Modus `0755`; zusätzliche Ausführungsprivilegien, Setuid, Gruppenänderungen und Datei-Capabilities werden nicht angefordert.
 
-**Paket stoppen** deaktiviert die Ausführung in SynoWake. Bereits registrierte DSM-Aufgaben bleiben vorhanden, dürfen aber im gestoppten Zustand kein Gerät aufwecken. **Paket starten** gibt die Ausführung wieder frei. Ein Upgrade verwendet die vorhandenen Paketdaten.
+**Paket stoppen** deaktiviert die Ausführung und beendet den Dienst. Bereits registrierte DSM-Aufgaben bleiben vorhanden, dürfen aber im gestoppten Zustand kein Gerät aufwecken. **Paket starten** startet den Dienst und prüft seine Erreichbarkeit. Ein Upgrade verwendet die vorhandenen Paketdaten. Startprobleme werden in `/var/packages/SynoWake/var/service.log` protokolliert.
 
 **Vor der Deinstallation alle SynoWake-Zeitpläne in der Anwendung entfernen.** Die Paket-Skripte besitzen keine DSM-Administratorsitzung und löschen Aufgaben deshalb nicht eigenmächtig. Eventuell verbliebene Aufgaben im DSM-Aufgabenplaner anhand des SynoWake-Präfixes kontrollieren und löschen. Nach dem Entfernen des Pakets enthalten sie einen nicht mehr vorhandenen Programmpfad.
 

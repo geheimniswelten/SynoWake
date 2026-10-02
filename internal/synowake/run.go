@@ -22,27 +22,25 @@ import (
 
 var ErrStopped = errors.New("SynoWake ist angehalten")
 
+const PackageVersion = "0.1.1-0002"
+
 func Run(args []string) error {
-	// The CGI may be setuid to the package account, never root. Ignore caller
-	// controlled runtime paths and refuse lifecycle/CLI actions in that mode.
 	isCGI := os.Getenv("GATEWAY_INTERFACE") != ""
-	if os.Getuid() != os.Geteuid() && !isCGI {
-		return errors.New("Paket-CGI kann nicht als CLI ausgeführt werden.")
-	}
 	os.Setenv("PATH", "/usr/syno/bin:/usr/bin:/bin")
 	for _, name := range []string{"LD_PRELOAD", "LD_LIBRARY_PATH", "GCONV_PATH", "BASH_ENV", "ENV", "PYTHONPATH"} {
 		os.Unsetenv(name)
 	}
+	if isCGI {
+		// This unprivileged gateway never opens package data. The service owns it.
+		return cgi.Serve(newCGIProxy(defaultSocket))
+	}
 	root := os.Getenv("SYNOWAKE_VAR")
-	if root == "" || isCGI {
+	if root == "" {
 		root = "/var/packages/SynoWake/var"
 	}
 	app := &App{Root: root}
-	if isCGI {
-		return cgi.Serve(app)
-	}
 	if len(args) == 0 {
-		return errors.New("CGI oder init/start/stop/status/--run-schedule/--serve-demo erwartet.")
+		return errors.New("CGI oder init/start/stop/status/--serve/--run-schedule/--serve-demo erwartet.")
 	}
 	switch args[0] {
 	case "init":
@@ -50,7 +48,7 @@ func Run(args []string) error {
 	case "start":
 		return app.update(func(s *Store) error { s.Active = true; return nil })
 	case "stop":
-		return app.update(func(s *Store) error { s.Active = false; return nil })
+		return app.stopBackend(socketPath())
 	case "status":
 		s, err := app.readStore()
 		if err != nil {
@@ -59,7 +57,13 @@ func Run(args []string) error {
 		if !s.Active {
 			return ErrStopped
 		}
+		active, err := backendHealth(socketPath())
+		if err != nil || !active {
+			return ErrStopped
+		}
 		return nil
+	case "--serve":
+		return app.serveBackend(socketPath())
 	case "--serve-demo":
 		if len(args) != 3 {
 			return errors.New("--serve-demo 127.0.0.1:PORT UI_DIRECTORY")
