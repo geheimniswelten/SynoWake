@@ -1,0 +1,23 @@
+{
+  "SynoWake.js": {
+    "SYNO.SDS.SynoWake.Application": {
+      "type": "app",
+      "title": "SynoWake",
+      "appWindow": "SYNO.SDS.SynoWake.MainWindow",
+      "desc": "Wake-on-LAN",
+      "icon": "images/icon_{0}.png",
+      "allowMultiInstance": false,
+      "allowStandalone": false,
+      "allowSharing": false,
+      "allUsers": false,
+      "grantPrivilege": "local",
+      "advanceGrantPrivilege": true,
+      "depend": ["SYNO.SDS.SynoWake.MainWindow"]
+    },
+    "SYNO.SDS.SynoWake.MainWindow": {
+      "type": "lib",
+      "title": "SynoWake",
+      "icon": "images/icon_{0}.png"
+    }
+  }
+}

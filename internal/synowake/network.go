@@ -1,0 +1,341 @@
+package synowake
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"os/exec"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+)
+
+func runCommand(path string, args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	data, err := exec.CommandContext(ctx, path, args...).CombinedOutput()
+	if err != nil {
+		return string(data), fmt.Errorf("%s: %w", path, err)
+	}
+	return string(data), nil
+}
+func ping(ip string) (bool, error) {
+	path, err := exec.LookPath("ping")
+	if err != nil {
+		return false, errors.New("ping ist nicht verfügbar")
+	}
+	_, err = runCommand(path, "-n", "-c", "1", "-W", "1", ip)
+	if err == nil {
+		return true, nil
+	}
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return false, nil
+	}
+	return false, errors.New("ICMP-Statusprüfung nicht verfügbar (ping-Berechtigung prüfen).")
+}
+func wake(d Device) error {
+	packet, err := magicPacket(d.MAC)
+	if err != nil {
+		return err
+	}
+	return sendMagic(d.Broadcast, d.Port, packet)
+}
+
+type FoundDevice struct {
+	Name string `json:"name"`
+	IP   string `json:"ip"`
+	MAC  string `json:"mac"`
+	Type string `json:"type"`
+}
+
+func discoveryNetwork(cidr string) (*net.IPNet, error) {
+	ip, n, err := net.ParseCIDR(cidr)
+	if err != nil || ip.To4() == nil {
+		return nil, errors.New("Ein IPv4-Netz als CIDR eingeben, z. B. 192.168.1.0/24.")
+	}
+	bits, _ := n.Mask.Size()
+	if bits < 24 || bits > 30 {
+		return nil, errors.New("Suche auf /24 bis /30 begrenzt (höchstens 254 Geräte).")
+	}
+	end := append(net.IP(nil), n.IP...)
+	for i := range end {
+		end[i] |= ^n.Mask[i]
+	}
+	if privateIPv4(n.IP.String()) == nil || privateIPv4(end.String()) == nil {
+		return nil, errors.New("Nur private LAN-Netze können durchsucht werden.")
+	}
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+	local := false
+	for _, it := range interfaces {
+		addrs, _ := it.Addrs()
+		for _, a := range addrs {
+			host, _, _ := net.ParseCIDR(a.String())
+			if host != nil && n.Contains(host) {
+				local = true
+			}
+		}
+	}
+	if !local {
+		return nil, errors.New("Das Suchnetz muss an einer lokalen NAS-Netzwerkschnittstelle liegen.")
+	}
+	return n, nil
+}
+func discover(cidr string) ([]FoundDevice, []string, error) {
+	network, err := discoveryNetwork(cidr)
+	if err != nil {
+		return nil, nil, err
+	}
+	jobs := make(chan string)
+	var wg sync.WaitGroup
+	var errMu sync.Mutex
+	var pingErr error
+	for i := 0; i < 24; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for ip := range jobs {
+				_, err := ping(ip)
+				if err != nil {
+					errMu.Lock()
+					pingErr = err
+					errMu.Unlock()
+				}
+			}
+		}()
+	}
+	base := network.IP.To4()
+	bits, _ := network.Mask.Size()
+	count := 1 << (32 - bits)
+	for i := 1; i < count-1; i++ {
+		ip := append(net.IP(nil), base...)
+		ip[3] += byte(i)
+		jobs <- ip.String()
+	}
+	close(jobs)
+	wg.Wait()
+	neighbors := map[string]string{}
+	file, err := os.Open("/proc/net/arp")
+	if err == nil {
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			fields := strings.Fields(scanner.Text())
+			if len(fields) >= 6 && fields[2] != "0x0" {
+				ip := net.ParseIP(fields[0])
+				mac, e := net.ParseMAC(fields[3])
+				if ip != nil && network.Contains(ip) && e == nil && len(mac) == 6 && mac[0]&1 == 0 && fields[3] != "00:00:00:00:00:00" {
+					neighbors[ip.String()] = strings.ToUpper(mac.String())
+				}
+			}
+		}
+		file.Close()
+	}
+	if path, e := exec.LookPath("ip"); e == nil {
+		out, _ := runCommand(path, "-4", "neigh", "show")
+		for _, line := range strings.Split(out, "\n") {
+			fields := strings.Fields(line)
+			if len(fields) < 5 {
+				continue
+			}
+			ip := net.ParseIP(fields[0])
+			if ip == nil || !network.Contains(ip) {
+				continue
+			}
+			for i, f := range fields {
+				if f == "lladdr" && i+1 < len(fields) {
+					mac, e := net.ParseMAC(fields[i+1])
+					if e == nil && len(mac) == 6 && mac[0]&1 == 0 {
+						neighbors[ip.String()] = strings.ToUpper(mac.String())
+					}
+				}
+			}
+		}
+	}
+	warnings := []string{"Die Suche findet IPv4-Nachbarn im lokalen LAN. Schlafende Geräte, VLANs und Geräte ohne ARP-Eintrag können fehlen. Namen stammen aus DNS und bleiben bearbeitbar."}
+	if pingErr != nil {
+		warnings = append(warnings, pingErr.Error())
+	}
+	results := make([]FoundDevice, 0, len(neighbors))
+	sem := make(chan struct{}, 16)
+	var mu sync.Mutex
+	for ip, mac := range neighbors {
+		ip, mac := ip, mac
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			name := fmt.Sprintf("LAN-Gerät (%s)", ip)
+			ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
+			defer cancel()
+			names, _ := net.DefaultResolver.LookupAddr(ctx, ip)
+			if len(names) > 0 {
+				name = strings.TrimSuffix(names[0], ".")
+			}
+			mu.Lock()
+			results = append(results, FoundDevice{name, ip, mac, "LAN-Gerät"})
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+	sort.Slice(results, func(i, j int) bool { return results[i].IP < results[j].IP })
+	return results, warnings, nil
+}
+
+func (a *App) event(l Log, notify bool) error {
+	if l.ID == "" {
+		l.ID = randomID()
+	}
+	if l.Time.IsZero() {
+		l.Time = time.Now().UTC()
+	}
+	l.CenterPending = !a.Demo
+	if err := a.update(func(s *Store) error {
+		for i, old := range s.Logs {
+			if old.ID == l.ID {
+				s.Logs[i] = l
+				return nil
+			}
+		}
+		addLog(s, l)
+		return nil
+	}); err != nil {
+		return err
+	}
+	if a.Demo {
+		return nil
+	}
+	if err := a.deliverCenter(l); err != nil {
+		return err
+	}
+	if notify {
+		variablesBytes, _ := json.Marshal(map[string]string{"%MESSAGE%": l.Message})
+		variables := string(variablesBytes)
+		_, err := runCommand("/usr/syno/bin/synodsmnotify", "@administrators", "SynoWakeWake", variables)
+		msg := ""
+		if err != nil {
+			msg = "DSM-Benachrichtigung fehlgeschlagen: " + err.Error()
+		}
+		if err := a.update(func(s *Store) error {
+			setDiagnostic(s, "notification", msg)
+			if msg != "" {
+				addLog(s, Log{Level: "warning", Source: "integration", Message: msg})
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Keep failed Log Center deliveries in the application log for explicit retry.
+func (a *App) deliverCenter(l Log) error {
+	s, err := a.readStore()
+	if err != nil {
+		return err
+	}
+	level := "info"
+	severity := 6
+	if l.Level == "error" {
+		level = "err"
+		severity = 3
+	}
+	if l.Level == "warning" {
+		level = "warn"
+		severity = 4
+	}
+	_, nativeErr := runCommand("/usr/syno/bin/synologset1", "sys", level, "0x11100000", "SynoWake: "+l.Message)
+	deliveryErr := nativeErr
+	if deliveryErr != nil && s.LogCenterPort > 0 {
+		c, e := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", s.LogCenterPort), 2*time.Second)
+		if e == nil {
+			c.SetWriteDeadline(time.Now().Add(2 * time.Second))
+			host, _ := os.Hostname()
+			message := strings.NewReplacer("\r", " ", "\n", " ").Replace(l.Message)
+			when := l.Time
+			if when.IsZero() {
+				when = time.Now()
+			}
+			_, e = fmt.Fprintf(c, "<%d>%s %s SynoWake: %s\n", 8+severity, when.Local().Format("Jan _2 15:04:05"), host, message)
+			c.Close()
+		}
+		deliveryErr = e
+	}
+	message := ""
+	if deliveryErr != nil {
+		message = "Protokoll-Center-Übertragung ausstehend. Lokalen TCP-Empfänger einrichten oder DSM-Berechtigungen prüfen: " + deliveryErr.Error()
+		if path, e := exec.LookPath("logger"); e == nil {
+			runCommand(path, "-t", "SynoWake", l.Message)
+		}
+	}
+	return a.update(func(s *Store) error {
+		pending := false
+		for i, item := range s.Logs {
+			if item.ID == l.ID {
+				s.Logs[i].CenterPending = deliveryErr != nil
+			}
+			if s.Logs[i].CenterPending {
+				pending = true
+			}
+		}
+		if !pending {
+			message = ""
+		}
+		if pending && message == "" {
+			message = "Einige Protokoll-Center-Einträge warten auf erneute Übertragung."
+		}
+		setDiagnostic(s, "log-center", message)
+		return nil
+	})
+}
+func (a *App) retryCenter() (map[string]int, error) {
+	s, err := a.readStore()
+	if err != nil {
+		return nil, err
+	}
+	logs := []Log{}
+	for _, l := range s.Logs {
+		if l.CenterPending && len(logs) < 20 {
+			logs = append(logs, l)
+		}
+	}
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 4)
+	var mu sync.Mutex
+	var updateErr error
+	for _, l := range logs {
+		l := l
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			if e := a.deliverCenter(l); e != nil {
+				mu.Lock()
+				updateErr = e
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	s, err = a.readStore()
+	if err != nil {
+		return nil, err
+	}
+	remaining := 0
+	for _, l := range s.Logs {
+		if l.CenterPending {
+			remaining++
+		}
+	}
+	return map[string]int{"attempted": len(logs), "remaining": remaining}, updateErr
+}

@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+SYNOWAKE_PKGDEST="${SYNOPKG_PKGDEST:-/var/packages/SynoWake/target}"
+SYNOWAKE_VAR="${SYNOPKG_PKGVAR:-/var/packages/SynoWake/var}"
+export SYNOWAKE_PKGDEST SYNOWAKE_VAR
+
+case "${1:-}" in
+    start|stop|status)
+        exec "$SYNOWAKE_PKGDEST/bin/synowake" "$1"
+        ;;
+    prestart|prestop)
+        exit 0
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status}" >&2
+        exit 1
+        ;;
+esac

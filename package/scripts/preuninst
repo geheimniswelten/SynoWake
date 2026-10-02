@@ -1,0 +1,4 @@
+#!/bin/sh
+# Task Scheduler changes need a DSM administrator session. Remove SynoWake
+# schedules in the application before uninstalling; lifecycle runs unprivileged.
+exit 0

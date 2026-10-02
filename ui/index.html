@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SynoWake</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand-mark" aria-hidden="true">⏻</div>
+      <div class="brand"><h1>SynoWake</h1><p>Dein Netzwerk. Auf einen Klick wach.</p></div>
+      <span id="demo-badge" class="demo-badge" hidden>DEMO</span>
+      <div class="connection"><span id="connection-dot" class="connection-dot"></span><span id="connection-text" role="status">Verbindung wird aufgebaut</span></div>
+    </header>
+    <nav class="tabs" aria-label="Ansichten">
+      <button type="button" class="tab active" data-tab="dashboard" aria-current="page"><span aria-hidden="true">▦</span> Übersicht</button>
+      <button type="button" class="tab" data-tab="devices"><span aria-hidden="true">▤</span> Geräte</button>
+      <button type="button" class="tab" data-tab="automation"><span aria-hidden="true">◷</span> Automatik</button>
+    </nav>
+    <main>
+      <div id="boot-error" class="notice error" hidden></div>
+      <div id="diagnostics" class="diagnostics" aria-live="polite"></div>
+      <section id="dashboard" class="page" aria-label="Übersicht">
+        <div class="page-heading"><div><span class="eyebrow">WAKE-ON-LAN</span><h2>Bereit, wenn du es bist.</h2><p>Gerät auswählen und mit einem Magic Packet aufwecken.</p></div><button type="button" id="dashboard-add" class="button secondary">+ Gerät hinzufügen</button></div>
+        <div class="summary-bar" id="summary"></div>
+        <div class="toolbar dashboard-toolbar"><div class="selection-tools"><label class="check-label"><input type="checkbox" id="select-all"> Alle auswählen</label><button type="button" class="button primary compact" id="wake-selected" disabled>Auswahl aufwecken</button><span id="selection-count" class="muted"></span></div><label class="check-label notify-check"><input type="checkbox" id="manual-notify"> DSM-Benachrichtigung</label></div>
+        <div id="device-tiles" class="device-grid"><div class="loading-card">Geräte werden geladen …</div></div>
+        <p class="hint">Online-Status wird regelmäßig über die Erreichbarkeit der IP geprüft. Wake-on-LAN muss am Zielgerät eingerichtet sein.</p>
+      </section>
+      <section id="devices" class="page" aria-label="Geräteliste" hidden>
+        <div class="page-heading"><div><span class="eyebrow">DEIN NETZWERK</span><h2>Geräte verwalten</h2><p>Adressen hinterlegen, Geräte finden und Namen frei anpassen.</p></div><div class="button-row"><button type="button" id="discover-open" class="button secondary">⌕ Geräte suchen</button><button type="button" id="device-add" class="button primary">+ Neues Gerät</button></div></div>
+        <div class="toolbar"><label class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="device-search" placeholder="Name, IP oder MAC suchen" aria-label="Geräte durchsuchen"></label><span id="device-count" class="muted"></span></div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>IP-Adresse</th><th>MAC-Adresse</th><th>Status</th><th><span class="sr-only">Aktionen</span></th></tr></thead><tbody id="device-rows"></tbody></table></div>
+      </section>
+      <section id="automation" class="page" aria-label="Automatik" hidden>
+        <div class="page-heading"><div><span class="eyebrow">AUF DIE MINUTE</span><h2>Einfach automatisch.</h2><p>Weckzeiten über den DSM-Aufgabenplaner verwalten.</p></div><button type="button" id="schedule-add" class="button primary">+ Automatik anlegen</button></div>
+        <div class="notice info"><span aria-hidden="true">◷</span><div>Die Zeiten gelten in der Zeitzone deiner DiskStation. Jede Automatik wird als eigene Aufgabe im DSM-Aufgabenplaner gespeichert.</div></div>
+        <div id="schedule-list" class="schedule-list"></div>
+        <div class="section-heading"><h3>Letzte Ausführungen</h3><button type="button" id="refresh-logs" class="button quiet compact">↻ Aktualisieren</button></div>
+        <p class="hint log-hint">Ausführungen werden zusätzlich über Syslog an DSM übergeben. Hinweise zur Protokoll-Center-Anbindung erscheinen oben.</p>
+        <div id="execution-log" class="log-list"></div>
+        <details class="log-settings"><summary>Protokoll-Center-Anbindung</summary><p class="hint">Wenn DSM den direkten Log-Eintrag ablehnt, im Protokoll-Center einen TCP-Syslog-Empfänger anlegen und dessen Port hier eintragen. SynoWake überträgt ausschließlich an die eigene DiskStation (127.0.0.1).</p><form id="settings-form" class="scan-form"><label class="field">Lokaler TCP-Port<input name="logCenterPort" type="number" min="0" max="65535" value="0" required><span class="field-help">0 = zusätzlicher Empfänger aus · häufig Port 514</span></label><button type="submit" class="button secondary">Port speichern</button></form><div class="button-row"><button type="button" id="log-retry" class="button secondary compact">Protokoll-Center erneut übertragen</button><span id="log-pending" class="muted"></span></div><p id="settings-error" class="form-error" role="alert" hidden></p></details>
+      </section>
+    </main>
+    <footer><span>SynoWake <span id="version-label"></span></span><span id="user-label"></span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="device-dialog"><form id="device-form">
+    <div class="dialog-heading"><div><span class="eyebrow">GERÄT</span><h2 id="device-dialog-title">Gerät hinzufügen</h2></div><button type="button" class="icon-button close-dialog" aria-label="Schließen">×</button></div>
+    <input type="hidden" name="id">
+    <label class="field">Name<input name="name" required maxlength="80" autocomplete="off" placeholder="Zum Beispiel Arbeitsrechner"></label>
+    <div class="field-row"><label class="field">IP-Adresse<input name="ip" required inputmode="decimal" autocomplete="off" placeholder="192.168.1.20"></label><label class="field">MAC-Adresse<input name="mac" required maxlength="17" autocomplete="off" placeholder="AA:BB:CC:DD:EE:FF"></label></div>
+    <details class="advanced"><summary>Erweiterte Wake-on-LAN-Einstellungen</summary><div class="field-row"><label class="field">Broadcast-Adresse<input name="broadcast" placeholder="255.255.255.255" autocomplete="off"><span class="field-help">Leer = 255.255.255.255 (lokaler Broadcast).</span></label><label class="field small">UDP-Port<input name="port" type="number" min="1" max="65535" value="9" required></label></div></details>
+    <p id="device-form-error" class="form-error" role="alert" hidden></p>
+    <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Abbrechen</button><button type="submit" class="button primary">Gerät speichern</button></div>
+  </form></dialog>
+  <dialog id="discover-dialog" class="wide-dialog"><div class="dialog-heading"><div><span class="eyebrow">LOKALES NETZWERK</span><h2>Geräte entdecken</h2></div><button type="button" class="icon-button close-dialog" aria-label="Schließen">×</button></div>
+    <p class="dialog-copy">Erreichbare Geräte im IPv4-Netz suchen. Schlafende Geräte können meist nicht gefunden werden.</p>
+    <form id="discover-form" class="scan-form"><label class="field">Netzwerk (CIDR)<input name="cidr" required autocomplete="off" value="192.168.1.0/24" placeholder="192.168.1.0/24"></label><button type="submit" class="button primary">Suche starten</button></form>
+    <div id="discover-warnings"></div><p id="discover-progress" class="muted" role="status"></p><div id="discover-results" class="discover-results"></div>
+    <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Schließen</button><button type="button" id="discover-import" class="button primary" disabled>Auswahl übernehmen</button></div>
+  </dialog>
+  <dialog id="schedule-dialog"><form id="schedule-form">
+    <div class="dialog-heading"><div><span class="eyebrow">AUTOMATIK</span><h2 id="schedule-dialog-title">Weckzeit anlegen</h2></div><button type="button" class="icon-button close-dialog" aria-label="Schließen">×</button></div>
+    <input type="hidden" name="id"><label class="field">Name<input name="name" required maxlength="80" placeholder="Zum Beispiel Arbeitsbeginn"></label>
+    <div class="field-row"><label class="field">Gerät<select name="deviceId" required></select></label><label class="field small">Uhrzeit<input name="time" type="time" value="08:00" required></label></div>
+    <div class="field"><span>An diesen Tagen</span><div class="weekday-options" id="weekday-options"></div><div class="preset-days"><button type="button" class="button quiet compact" id="days-all">Täglich</button><button type="button" class="button quiet compact" id="days-work">Mo–Fr</button></div></div>
+    <label class="check-label form-check"><input type="checkbox" name="enabled" checked> Automatik aktiv</label><label class="check-label form-check"><input type="checkbox" name="notify"> Ausführung in DSM-Benachrichtigungen anzeigen</label>
+    <p class="hint">Zum Speichern wird deine angemeldete DSM-Sitzung verwendet. Die Aufgabe läuft unter deinem DSM-Benutzer.</p>
+    <p id="schedule-form-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary close-dialog">Abbrechen</button><button type="submit" class="button primary">Automatik speichern</button></div>
+  </form></dialog>
+  <dialog id="confirm-dialog"><form id="confirm-form"><div class="dialog-heading"><h2 id="confirm-title">Löschen bestätigen</h2></div><p id="confirm-copy" class="dialog-copy"></p><p id="confirm-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary close-dialog">Abbrechen</button><button type="submit" class="button danger" id="confirm-submit">Löschen</button></div></form></dialog>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+# SynoWake
+
+Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Der Paketname und der Name im DSM lauten **SynoWake**.
+
+Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
+
+**Status: erste Beta, Zielsystemprüfung erforderlich.** Das Paket lässt sich lokal bauen und prüfen. Eine erfolgreiche Installation auf einer DS918+ und die DSM-internen Integrationen können erst an der tatsächlichen NAS bestätigt werden. Besonders Aufgabenplaner, CGI-Berechtigungen, DSM-Fenster, Protokoll-Center und Benachrichtigungen gehören zur Abnahme.
+
+## Paket bauen
+
+Auf dem Entwicklungsrechner werden **Python 3.10 oder neuer** und **Go 1.24 oder neuer** benötigt. Die NAS benötigt weder Go noch Python, PHP, Web Station oder Container Manager: Das Paket enthält ein statisches Linux/amd64-Programm und statische Oberflächendateien.
+
+```powershell
+python scripts/build.py
+```
+
+Alternativ ein bereits gebautes statisches Programm verwenden:
+
+```powershell
+python scripts/build.py --binary build/synowake --output dist/SynoWake.spk
+```
+
+Der Builder prüft das ELF-Ziel Linux/amd64 und lehnt dynamisch gelinkte Programme ab. Er erzeugt ein SPK-Archiv, eine SHA256-Datei und den von DSM erwarteten MD5-Prüfwert für `package.tgz`. Archivpfade, Reihenfolge, Zeitstempel, Zeilenenden und POSIX-Dateirechte werden festgelegt; beim gleichen Eingabebestand entstehen identische Archive.
+
+Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` eingestellt. Es ist nicht signiert und wird als Beta gekennzeichnet.
+
+## Installation und erste Verwendung
+
+1. Im DSM mit einem Administratorkonto anmelden.
+2. **Paket-Zentrum → Manuelle Installation** öffnen und die erzeugte `.spk` auswählen. DSM zeigt bei diesem privaten Paket eine Warnung zum Herausgeber; Inhalt und Herkunft vor dem Fortfahren prüfen.
+3. Paket starten und **SynoWake** über das Hauptmenü oder die Schaltfläche **Öffnen** aufrufen.
+4. Im Tab **Geräte** ein Gerät mit Name, privater IPv4-Adresse und MAC-Adresse anlegen. Der Name bleibt bearbeitbar. Broadcast-Adresse und UDP-Port können bei Bedarf angepasst werden.
+5. Wake-on-LAN im BIOS/UEFI, Betriebssystem und Netzwerktreiber des Zielgeräts aktivieren. Zunächst im gleichen kabelgebundenen LAN testen.
+6. Auf der Startseite auf eine Gerätekachel klicken oder mehrere Geräte über die Schnellauswahl aufwecken.
+7. Im Tab **Automatik** Gerät, Uhrzeit, Wochentage und optional DSM-Benachrichtigungen wählen. Die Uhrzeit folgt der Zeitzone der NAS.
+
+Wenn das DSM-Anwendungsfenster auf der konkreten Firmware nicht lädt, die Oberfläche nach DSM-Anmeldung direkt unter `https://NAS:DSM-Port/webman/3rdparty/SynoWake/index.html` öffnen. Für einen eigenen HTTPS-Port dessen Wert einsetzen. Das ist zugleich ein Diagnoseweg für die Fensterintegration.
+
+## Status und Netzwerksuche
+
+`Online` bedeutet, dass die NAS eine ICMP-Antwort erhält. `Offline` bedeutet, dass derzeit keine solche Antwort vorliegt; eine Firewall kann einen laufenden Rechner ebenfalls so erscheinen lassen. Nach einem gesendeten Magic Packet zeigt SynoWake zunächst `Wird aufgeweckt` und prüft erneut. Das Senden allein beweist keinen erfolgreichen Start.
+
+Die Suche akzeptiert private IPv4-Netze von `/24` bis `/30`, die an einer lokalen NAS-Schnittstelle liegen. Sie prüft Hosts und liest Nachbartabellen. IP und MAC lassen sich aus Treffern in die Geräteliste übernehmen. Wenn Reverse-DNS einen Namen liefert, wird dieser vorgeschlagen; sonst erscheint ein allgemeiner LAN-Gerätetyp. Namen können jederzeit angepasst werden.
+
+Schlafende Geräte, entfernte VLANs und Hosts ohne verwertbaren Nachbartabelleneintrag können fehlen. Solche Geräte manuell eintragen. Eine IP-Fixierung bzw. DHCP-Reservierung verhindert, dass ein gespeichertes Gerät später eine andere Adresse erhält.
+
+## Zeitpläne und Paketlebenszyklus
+
+Zeitpläne erscheinen zusätzlich im DSM-Aufgabenplaner als SynoWake-Aufgaben. Erstellen, Bearbeiten und Löschen benötigt eine laufende DSM-Administratorsitzung. Die Browseroberfläche verwendet die interne Aufgabenplaner-WebAPI; Passwörter werden dabei nicht in SynoWake gespeichert.
+
+Aufgaben rufen das mitgelieferte CLI auf, das eine auf den lokalen DSM-Endpunkt begrenzte Anfrage an den CGI-Dienst sendet. Jeder Zeitplan erhält ein eigenes Geheimnis. Paketdaten liegen privat unter `/var/packages/SynoWake/var`; die ausführbaren Dateien liegen unter `/var/packages/SynoWake/target`. Paket-Skripte laufen mit dem Paketkonto, ohne Root-Freigabe. Nur der kompilierte CGI-Endpunkt erhält über die offizielle `tool`-Konfiguration Setuid auf das **Paketkonto SynoWake**, damit er dessen private Daten erreicht. Er erhält keine Root-Identität und akzeptiert keine erhöhten CLI-Lebenszyklusaufrufe.
+
+**Paket stoppen** deaktiviert die Ausführung in SynoWake. Bereits registrierte DSM-Aufgaben bleiben vorhanden, dürfen aber im gestoppten Zustand kein Gerät aufwecken. **Paket starten** gibt die Ausführung wieder frei. Ein Upgrade verwendet die vorhandenen Paketdaten.
+
+**Vor der Deinstallation alle SynoWake-Zeitpläne in der Anwendung entfernen.** Die Paket-Skripte besitzen keine DSM-Administratorsitzung und löschen Aufgaben deshalb nicht eigenmächtig. Eventuell verbliebene Aufgaben im DSM-Aufgabenplaner anhand des SynoWake-Präfixes kontrollieren und löschen. Nach dem Entfernen des Pakets enthalten sie einen nicht mehr vorhandenen Programmpfad.
+
+## Protokolle und Benachrichtigungen
+
+Jede ausgeführte Wake-Aktion wird im SynoWake-Protokoll gespeichert. Zusätzlich versucht die Anwendung, einen DSM-Systemeintrag über `synologset1` zu schreiben. Wenn DSM diese interne Funktion für das Paketkonto sperrt, lässt sich im Automatik-Tab ein lokaler TCP-Syslog-Empfänger des Protokoll-Centers konfigurieren. Fehler der DSM-Anbindung erscheinen als Diagnose in SynoWake; nicht übertragene Einträge bleiben für einen erneuten Versand vorgemerkt. Die Sichtbarkeit im **Protokoll-Center** muss auf DSM 7.1 geprüft werden, bevor sie als erfüllt gelten kann.
+
+SynoWake bewahrt alle noch nicht übertragenen Einträge und die neuesten 300 übertragenen Einträge auf. Bei 3000 ausstehenden Einträgen hält die Anwendung weitere Wake-Aktionen an, bis die Protokoll-Center-Anbindung funktioniert und der Rückstand übertragen wurde. Ein Ausführungseintrag wird bereits vor dem Magic Packet gespeichert und anschließend mit dem Ergebnis ergänzt, damit ein Prozessabbruch nicht die gesamte Aufzeichnung verliert.
+
+Für diesen Ersatzweg zunächst im vollständigen **Protokoll-Center → Archiveinstellungen** ein Speicherziel wählen. Unter **Protokolle empfangen → Erstellen** das Format **BSD (RFC 3164)**, **TCP** und einen freien Empfangsport wählen, beispielsweise **514**. SSL für diesen lokalen Sender ausschalten. In SynoWake denselben Port eintragen und speichern; die Anwendung sendet ausschließlich an `127.0.0.1`. Wenn DSM-Firewallregeln greifen, muss der lokale Zugriff auf diesen Port möglich sein. Danach eine Wake-Aktion ausführen, den Eintrag im Protokoll-Center prüfen und bei Bedarf die vorgemerkten Einträge erneut senden. Die Einrichtung folgt der [Synology-Anleitung für den Log-Empfang](https://kb.synology.com/index.php/en-us/DSM/help/LogCenter/logcenter_server?version=7). Der Empfangsport ist anfänglich deaktiviert (`0`).
+
+Ist bei einem Zeitplan der Benachrichtigungshaken gesetzt, wird die DSM-Desktop-Benachrichtigung `SynoWakeWake` an die Administratorgruppe gesendet. Das Paket registriert dafür Texte in Deutsch und Englisch über den offiziellen `sysnotify`-Ressourcenmechanismus. Benachrichtigungsfehler werden im Anwendungsprotokoll angezeigt.
+
+Die Schritte für die Prüfung auf der NAS stehen in [docs/DSM-TEST.md](docs/DSM-TEST.md). Hinweise zur DSM-Anbindung stehen in [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
+
+## Quellen der DSM-Anbindung
+
+Die Paketstruktur, Identitäten und Ressourcen folgen dem [Synology Package Developer Guide](https://help.synology.com/developer-guide/), insbesondere [INFO](https://help.synology.com/developer-guide/synology_package/INFO.html), [Privilege Config](https://help.synology.com/developer-guide/privilege/privilege_config.html), [Application Authentication](https://help.synology.com/developer-guide/integrate_dsm/web_authentication.html) und [System Notification](https://help.synology.com/developer-guide/resource_acquisition/sysnotify.html).
+
+Der aktuelle Guide beschreibt DSM 7.2.2. Die Anwendung zielt auf 7.1; aktuelle Dokumentation ersetzt deshalb keinen Test auf der gewünschten Version. Für das native DSM-Fenster dient die vom Entwickler veröffentlichte [AutoPilot-Fensterintegration](https://github.com/toafez/AutoPilot/blob/main/ui/AutoPilot.js) als Implementierungsbeispiel. Für Aufgabenobjekte und Methoden dient der eigene Quelltext von [N4S4/synology-api – Task Scheduler](https://github.com/N4S4/synology-api/blob/master/synology_api/task_scheduler.py) sowie dessen [WebAPI-Transport](https://github.com/N4S4/synology-api/blob/master/synology_api/auth.py) als Referenz. Dieses Projekt ist eine inoffizielle Implementierung; der Aufgabenplaner bleibt eine interne DSM-API, deren konkrete Antwortform auf dem Zielsystem geprüft werden muss.
