@@ -12,6 +12,8 @@
       "allUsers": false,
       "grantPrivilege": "local",
       "advanceGrantPrivilege": true,
+      "texts": "texts",
+      "preloadTexts": ["notification:title", "notification:message"],
       "depend": ["SYNO.SDS.SynoWake.MainWindow"]
     },
     "SYNO.SDS.SynoWake.MainWindow": {

@@ -197,3 +197,38 @@ func TestOversizedStoreTransactionPreservesReadableCommittedState(t *testing.T) 
 		t.Fatal("oversized update corrupted committed state")
 	}
 }
+
+func TestNotificationFailureIsVisibleAndPreservesExecutionLog(t *testing.T) {
+	if _, err := os.Stat("/usr/syno/bin/synodsmnotify"); err == nil {
+		t.Skip("isolated test requires absent DSM notifier")
+	}
+	for _, notify := range []bool{false, true} {
+		t.Run(fmt.Sprintf("enabled=%t", notify), func(t *testing.T) {
+			a := testApp(t)
+			a.Demo = false
+			id := randomID()
+			message := "Magic Packet gesendet: Büro <PC> 100%"
+			if err := a.event(Log{ID: id, Level: "info", Source: "schedule", Message: message}, notify); err != nil {
+				t.Fatal(err)
+			}
+			s := testStore(t, a)
+			foundExecution, notificationDiagnostic, notificationWarning := false, false, false
+			for _, entry := range s.Logs {
+				if entry.ID == id && entry.Message == message && entry.Source == "schedule" {
+					foundExecution = true
+				}
+				if entry.Source == "integration" && entry.Level == "warning" && strings.Contains(entry.Message, "DSM-Benachrichtigung fehlgeschlagen") {
+					notificationWarning = true
+				}
+			}
+			for _, diagnostic := range s.Diagnostics {
+				if diagnostic.Code == "notification" && strings.Contains(diagnostic.Message, "synodsmnotify") {
+					notificationDiagnostic = true
+				}
+			}
+			if !foundExecution || notificationDiagnostic != notify || notificationWarning != notify {
+				t.Fatalf("execution record or notification option/error handling incorrect: %+v", s)
+			}
+		})
+	}
+}

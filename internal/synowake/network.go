@@ -3,7 +3,6 @@ package synowake
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -217,9 +216,9 @@ func (a *App) event(l Log, notify bool) error {
 		return err
 	}
 	if notify {
-		variablesBytes, _ := json.Marshal(map[string]string{"%MESSAGE%": l.Message})
-		variables := string(variablesBytes)
-		_, err := runCommand("/usr/syno/bin/synodsmnotify", "@administrators", "SynoWakeWake", variables)
+		// DSM 7 desktop notifications use package i18n keys and positional
+		// substitutions. They do not require the reserved sysnotify worker.
+		_, err := runCommand("/usr/syno/bin/synodsmnotify", "-c", "SYNO.SDS.SynoWake.Application", "-p", "plain", "@administrators", "SynoWake:notification:title", "SynoWake:notification:message", l.Message)
 		msg := ""
 		if err != nil {
 			msg = "DSM-Benachrichtigung fehlgeschlagen: " + err.Error()

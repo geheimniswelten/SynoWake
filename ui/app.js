@@ -495,7 +495,7 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.1', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.2', diagnostics: [], settings: {logCenterPort: 0}, active: true,
   devices: [
     {id: 'demo1', name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, status: 'offline'},
     {id: 'demo2', name: 'Medien-PC', ip: '192.168.1.32', mac: 'A0:B1:C2:D3:E4:02', broadcast: '192.168.1.255', port: 9, status: 'online'},

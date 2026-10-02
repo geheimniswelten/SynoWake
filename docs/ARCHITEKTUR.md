@@ -6,7 +6,6 @@
 SynoWake.spk
   INFO                         Paketkennung, apollolake, DSM-Mindestversion
   conf/privilege               ausschließlich defaults.run-as: package
-  conf/resource                DSM-Benachrichtigungstexte
   scripts/                     init/start/stop/status
   package.tgz
     bin/synowake               Paketdienst und CLI für Aufgabenplaner/Lebenszyklus
@@ -52,7 +51,9 @@ Scheitert die Übertragung, bleibt der Eintrag mit einer Versandmarkierung im lo
 
 Alle ausstehenden Einträge bleiben erhalten; bereits übertragene Einträge werden auf die neuesten 300 begrenzt. Bei 3000 ausstehenden Einträgen blockiert SynoWake weitere Wake-Aktionen vor dem UDP-Versand. Die lokale Absicht wird vor dem Versand dauerhaft geschrieben und unter derselben Eintrags-ID mit dem Ergebnis ergänzt. Ein Prozessabbruch kann einen begonnenen Eintrag hinterlassen; dieser belegt allein keinen erfolgreichen Versand oder Gerätestart. Der Dateischreiber begrenzt den Datenbestand auf ein lesbares Format und meldet einen Fehler, bevor eine zu große Datendatei ersetzt würde.
 
-Für Desktop-Meldungen registriert die Ressource `sysnotify` die Kategorie `SynoWake` und bindet sie an `SYNO.SDS.SynoWake.Application`. Das Backend übergibt den Text als JSON-Variable `%MESSAGE%` an `synodsmnotify`. Die Ressource wird bei Paketstart erworben und beim Stoppen freigegeben; gestoppte Zeitpläne sollen deshalb weder Wake-Aktionen noch Meldungen auslösen.
+Das Paket enthält keine `conf/resource` und fordert keine Ressourcen-Worker an. DSM 7.1 hat die frühere `sysnotify`-Registrierung als Ressource ausschließlich für Synology-Pakete abgewiesen; der Builder verhindert deren erneute Aufnahme.
+
+Für Desktop-Meldungen verwendet der Dienst `synodsmnotify -c SYNO.SDS.SynoWake.Application -p plain @administrators SynoWake:notification:title SynoWake:notification:message <Text>`. Die Sprachdateien `ui/texts/{ger,enu}/strings` enthalten Titel und den Nachrichtenplatzhalter `{0}`. `texts` und `preloadTexts` sind im App-Config eingetragen, damit Meldungen auch bei geschlossenem App-Fenster möglich sind. Der Text wird als eigenes Prozessargument übergeben, ohne Shell oder JSON-Mailstring. Fehler erscheinen als Diagnose und lokaler Protokolleintrag. Gestoppte Zeitpläne senden weiterhin weder Magic Packet noch Benachrichtigung.
 
 ## Quellen
 
@@ -60,7 +61,7 @@ Für Desktop-Meldungen registriert die Ressource `sysnotify` die Kategorie `Syno
 - [Synology Privilege Config](https://help.synology.com/developer-guide/privilege/privilege_config.html): Paketidentität und ausführbare Dateien.
 - [Synology FHS](https://help.synology.com/developer-guide/integrate_dsm/fhs.html): separate `target`- und `var`-Verzeichnisse.
 - [Synology Application Authentication](https://help.synology.com/developer-guide/integrate_dsm/web_authentication.html): Prüfung der DSM-Sitzung aus einer Paket-CGI.
-- [Synology System Notification](https://help.synology.com/developer-guide/resource_acquisition/sysnotify.html): Ressource, Kategorie und Aufruf mit benutzerdefinierten Variablen.
+- [Synology Desktop Notifications](https://help.synology.com/developer-guide/synology_package/show_massage.html), [Application I18N](https://help.synology.com/developer-guide/integrate_dsm/i18n.html) und [App-Config](https://help.synology.com/developer-guide/integrate_dsm/config.html): App-I18N-Schlüssel, Sprachdateien und `preloadTexts`.
 - [Synology Log Receiving](https://kb.synology.com/index.php/en-us/DSM/help/LogCenter/logcenter_server?version=7): Protokoll-Center-Empfänger mit BSD-Format, TCP und frei wählbarem Port.
 - [AutoPilot config](https://github.com/toafez/AutoPilot/blob/main/ui/config) und [AutoPilot.js](https://github.com/toafez/AutoPilot/blob/main/ui/AutoPilot.js): eigener Quelltext als Beispiel des DSM-Anwendungsfensters.
 - [N4S4 Task Scheduler](https://github.com/N4S4/synology-api/blob/master/synology_api/task_scheduler.py) und [WebAPI-Transport](https://github.com/N4S4/synology-api/blob/master/synology_api/auth.py): primärer Projektquelltext einer inoffiziellen API-Implementierung, als Referenz für Aufgabenfelder und Request-Format.

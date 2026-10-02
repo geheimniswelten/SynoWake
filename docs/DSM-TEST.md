@@ -4,7 +4,7 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 
 | Prüfung | Erwartetes Ergebnis |
 | --- | --- |
-| SPK manuell installieren | Paket-Zentrum akzeptiert die Architektur und Mindestversion; keine Root-Privilege-Meldung. |
+| SPK manuell installieren | Paket-Zentrum akzeptiert die Architektur und Mindestversion; keine Root-Privilege-Meldung und keine abgelehnte Synology-Ressource. |
 | Installierte Programmrechte prüfen | `ui/api.cgi` und `bin/synowake` haben Modus `0755`; keine Setuid-/Setgid-Bits und keine zusätzlichen Ausführungsprivilegien. |
 | Paketdienst prüfen | Dienst läuft unter dem SynoWake-Paketkonto; `target/run/backend.sock` existiert und `bin/synowake status` liefert 0. |
 | Paket starten und öffnen | Eigenes DSM-Fenster zeigt Gerätekacheln, Geräteliste und Automatik. |
@@ -19,7 +19,8 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Zeitplan ausführen | Testrechner startet; Anwendungsprotokoll enthält Zeit und Gerät. |
 | Uhrzeit und Wochentage bearbeiten | Bestehende DSM-Aufgabe wird geändert; keine doppelte Aufgabe. |
 | Zeitplan deaktivieren/aktivieren | DSM-Aufgabe und Oberflächenzustand stimmen überein. |
-| Benachrichtigung aktivieren | DSM-Desktopmeldung erscheint bei der Ausführung; bei ausgeschaltetem Haken fehlt sie. |
+| Benachrichtigung aktivieren | DSM-Desktopmeldung mit Titel und tatsächlichem Ausführungstext erscheint bei der Ausführung; bei ausgeschaltetem Haken fehlt sie. |
+| App-Fenster schließen und Zeitplan ausführen | Benachrichtigung erscheint weiterhin durch `preloadTexts`; Deutsch/Englisch und Gerätenamen mit Umlauten, Prozentzeichen oder spitzen Klammern prüfen. |
 | Protokoll-Center öffnen | Die Wake-Aktion ist dort mit SynoWake-Kennung nachvollziehbar. Eine Diagnose in SynoWake darf nicht übergangen werden. |
 | TCP-Empfänger als Ersatzweg einstellen | BSD/TCP-Empfang im Protokoll-Center und gespeicherter SynoWake-Port stimmen überein; Loopback-Versand erscheint im Protokoll-Center. |
 | Empfang vorübergehend ausschalten | Neue Wake-Aktion bleibt im lokalen Verlauf als nicht übermittelt markiert; eine Diagnose ist sichtbar. |

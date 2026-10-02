@@ -22,7 +22,7 @@ import (
 
 var ErrStopped = errors.New("SynoWake ist angehalten")
 
-const PackageVersion = "0.1.1-0002"
+const PackageVersion = "0.1.2-0003"
 
 func Run(args []string) error {
 	isCGI := os.Getenv("GATEWAY_INTERFACE") != ""
