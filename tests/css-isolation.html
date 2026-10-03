@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>SynoWake CSS-Isolation</title>
+  <style>
+    html { font: 13px/1.2 Arial, sans-serif; color: #222; background: #e7edf2; }
+    body { margin: 18px; }
+    .fixture { width: 880px; padding: 12px; background: white; border: 1px solid #ccc; }
+    .fixture h2 { margin: 6px 0; font-size: 18px; }
+    .fixture .toolbar { margin: 8px 0; }
+    .fixture table { width: 100%; border-spacing: 2px; }
+    .fixture th, .fixture td { text-align: left; padding: 3px; }
+    .fixture .status, .fixture .button, .fixture .tab { display: inline-block; padding: 2px; }
+    #report { white-space: pre-wrap; font: 13px/1.5 monospace; max-width: 1000px; height: 280px; overflow: auto; }
+    iframe { width: 920px; height: 740px; border: 1px solid #bbb; background: white; }
+  </style>
+</head>
+<body>
+  <section class="fixture">
+    <h2 id="package-title">Paket-Zentrum · äußeres Dokument</h2>
+    <div class="toolbar"><label>Suche <input id="search" value="Pakete"></label><button id="install" class="button">Manuelle Installation</button></div>
+    <div class="tabs"><button id="installed" class="tab">Installiert</button></div>
+    <table id="packages"><thead><tr><th id="package-heading">Paket</th><th>Status</th></tr></thead><tbody><tr><td id="package-name">Synology Drive Server</td><td id="package-status" class="status">Öffnen</td></tr></tbody></table>
+    <h3 id="widget-title">Systemzustand</h3><span id="widget-status" class="status online">In Ordnung</span>
+    <details><summary id="summary">Widget-Details</summary>Text</details>
+    <footer id="widget-footer">Laufzeit und Netzwerk</footer>
+  </section>
+  <pre id="report">Prüfung läuft …</pre>
+  <iframe id="app" title="SynoWake Demo" src="/ui/index.html?demo=1"></iframe>
+  <script type="module" src="/tests/css-isolation.js"></script>
+</body>
+</html>

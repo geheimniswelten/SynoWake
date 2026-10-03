@@ -38,6 +38,8 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 
 ## Diagnose bei einem Fehler
 
+Für Version 0.1.4 zusätzlich Paket-Zentrum und Widgets offen halten, SynoWake stoppen/starten und das App-Fenster öffnen/schließen. Texte, Zeilenhöhen, Symbole und Formularfelder außerhalb von SynoWake müssen unverändert bleiben. Nach dem Upgrade DSM einmal vollständig neu laden (ggf. Strg+F5), damit bereits geladene CSS-Regeln der alten Version entfernt werden. Geräte, Zeitpläne und Ausführungsprotokolle müssen beim Upgrade erhalten bleiben.
+
 Das sichtbare Fehlerbild, die DSM-Version, die Uhrzeit und die Aktion festhalten. Im SynoWake-Protokoll die Diagnose ansehen. Bei Problemen mit Installation oder Start zusätzlich `/var/log/packages/SynoWake.log` und die DSM-Paketbetriebsprotokolle prüfen. Die private Dateiablage in `/var/packages/SynoWake/var` enthält Zeitplan-Geheimnisse und gehört nicht in ungeschwärzte Supportberichte.
 
 Bei einer Aufgabenplaner-WebAPI-Meldung den Fehlercode und die Methode erfassen. Den betreffenden Zeitplan auch direkt im DSM-Aufgabenplaner kontrollieren. Eine fehlgeschlagene Registrierung bleibt ein Fehler; den Zeitplan nicht als funktionierend abnehmen.

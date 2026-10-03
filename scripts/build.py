@@ -158,9 +158,12 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     if resource_config.exists() and json.loads(normalized(resource_config)) != {}:
         raise ValueError("SynoWake must not acquire DSM resources; use application i18n for desktop notifications instead of sysnotify")
     ui_root = ROOT / "ui"
-    for required in (ui_root / "index.html", ui_root / "app.js", ui_root / "style.css", ui_root / "scheduler.js"):
+    for required in (ui_root / "index.html", ui_root / "app.js", ui_root / "assets" / "synowake.css", ui_root / "scheduler.js"):
         if not required.is_file():
             raise ValueError(f"Missing application asset: {required}")
+    for desktop_style in (ui_root / "style.css", package_root / "ui" / "style.css"):
+        if desktop_style.exists():
+            raise ValueError("Do not expose iframe styles as DSM ui/style.css; use scoped ui/assets/synowake.css instead")
 
     payload: dict[str, tuple[bytes, int]] = {}
     for base, prefix in ((ui_root, "ui"), (package_root / "ui", "ui")):

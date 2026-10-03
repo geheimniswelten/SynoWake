@@ -4,7 +4,9 @@ Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Der Paketname u
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
-**Version 0.1.3-0004: Netzwerkerkennung korrigiert, Beta mit Zielsystemprüfung.** Die Suche verwendet aktive NAS-Schnittstellen und deren Netzmasken. Auch direkt angeschlossene Netze außerhalb der privaten IPv4-Bereiche werden unterstützt. Der Paketdienst verwendet ausschließlich das Paketkonto. Die CGI-Weiterleitung benötigt keine erhöhten Ausführungsrechte. Das Paket fordert keine DSM-Ressourcen an; Desktop-Benachrichtigungen verwenden App-Sprachtexte. Netzwerkverkehr, Aufgabenplaner, Protokoll-Center und Benachrichtigungen müssen auf der tatsächlichen NAS bestätigt werden.
+**Version 0.1.4-0005: Styles vom DSM-Desktop getrennt, Beta mit Zielsystemprüfung.** Die Oberfläche verwendet ausschließlich `ui/assets/synowake.css` innerhalb ihres iframe. Alle CSS-Selektoren sind auf `#synowake-app` begrenzt; eine globale `ui/style.css` wird nicht mehr ausgeliefert. Dadurch sollen Paket-Zentrum, Widgets und andere DSM-Anwendungen beim Aktivieren von SynoWake unverändert bleiben. Nach dem Update DSM neu laden, damit eventuell bereits geladene alte CSS-Regeln verschwinden. Der Builder weist die alte globale CSS-Datei ab. Die Korrektur wird mit einem Browser-Test für unveränderte Stile und Abmessungen außerhalb von SynoWake geprüft; die tatsächliche DSM-Integration bleibt auf der NAS zu bestätigen.
+
+Die Suche verwendet aktive NAS-Schnittstellen und deren Netzmasken. Auch direkt angeschlossene Netze außerhalb der privaten IPv4-Bereiche werden unterstützt. Der Paketdienst verwendet ausschließlich das Paketkonto. Die CGI-Weiterleitung benötigt keine erhöhten Ausführungsrechte. Das Paket fordert keine DSM-Ressourcen an; Desktop-Benachrichtigungen verwenden App-Sprachtexte. Netzwerkverkehr, Aufgabenplaner, Protokoll-Center und Benachrichtigungen müssen auf der tatsächlichen NAS bestätigt werden.
 
 ## Paket bauen
 
@@ -21,6 +23,8 @@ python scripts/build.py --binary build/synowake --output dist/SynoWake.spk
 ```
 
 Der Builder prüft das ELF-Ziel Linux/amd64 und lehnt dynamisch gelinkte Programme ab. Er erzeugt ein SPK-Archiv, eine SHA256-Datei und den von DSM erwarteten MD5-Prüfwert für `package.tgz`. Archivpfade, Reihenfolge, Zeitstempel, Zeilenenden und POSIX-Dateirechte werden festgelegt; beim gleichen Eingabebestand entstehen identische Archive.
+
+CSS-Regression prüfen: `node scripts/test-ui.mjs` starten und die ausgegebene lokale Adresse in Firefox öffnen. Der Test reproduziert die Änderung am äußeren Dokument mit der alten CSS, prüft die neue Begrenzung, Dialoge und vier Fensterbreiten. Die alte CSS liegt ausschließlich unter `tests/fixtures` und wird nicht ins SPK aufgenommen.
 
 Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` eingestellt. Es ist nicht signiert und wird als Beta gekennzeichnet.
 

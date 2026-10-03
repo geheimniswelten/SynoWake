@@ -14,7 +14,7 @@ SynoWake.spk
     ui/index.html              Browseroberfläche
     ui/app.js
     ui/scheduler.js            DSM-TaskScheduler-Client im Browser
-    ui/style.css
+    ui/assets/synowake.css      nur für den iframe, Selektoren unter #synowake-app
     ui/config                  DSM-Anwendungsregistrierung
     ui/SynoWake.js              natives DSM-Fenster mit eingebetteter Oberfläche
     ui/images/                 durch Code gezeichnete PNG-Symbole
@@ -32,6 +32,10 @@ Der Backend-Zustand enthält aktive IPv4-Schnittstellen mit NAS-Adresse, CIDR, b
 Ein Suchnetz muss vollständig in einem angeschlossenen Schnittstellennetz liegen. Die Adressklasse allein entscheidet nicht über die Zulässigkeit: Ein lokal verwendetes `192.167.178.0/24` ist zulässig, ein nicht angeschlossenes `192.168.1.0/24` bleibt unzulässig. Größere Netze werden für den Suchvorschlag auf den `/24`-Bereich mit der NAS-Adresse begrenzt; `/25` bis `/30` bleiben unverändert. Die Validierung verwendet Netzanfang und Netzende, damit ein Suchbereich keine enger konfigurierte Netzmaske überschreitet.
 
 Die Gerätevalidierung akzeptiert private IPv4-Adressen und zusätzliche direkt angeschlossene IPv4-Hostadressen. Für zusätzliche Broadcast-Ziele muss die Adresse mit dem Broadcast einer aktiven NAS-Schnittstelle übereinstimmen. Die Gerätesuche liefert diesen Broadcast zusammen mit IP und MAC, und die Oberfläche übernimmt ihn beim Speichern. Der allgemein gültige lokale Broadcast `255.255.255.255` bleibt verfügbar.
+
+## Begrenzung der Oberflächen-Styles
+
+Das für DSM registrierte UI-Verzeichnis enthält keine `style.css`. Diese reservierte Desktop-CSS-Datei darf keine globalen Resets einer eingebetteten HTML-Anwendung enthalten. `index.html` lädt stattdessen ausdrücklich `assets/synowake.css`. Sämtliche Selektoren, einschließlich Media-Queries und Dialogen, beginnen mit `#synowake-app`; dieser Bezeichner sitzt auf dem iframe-Body und existiert nicht im DSM-Dokument. Auch die Animation hat einen paketbezogenen Namen. Ein Browser-Test lädt die private CSS absichtlich im äußeren Dokument und vergleicht Stile und Abmessungen von Tabellen, Widgets und Formularelementen davor und danach. Die Build-Prüfung verhindert die erneute Auslieferung einer globalen `ui/style.css`.
 
 ## Aufgabenplaner
 

@@ -1,0 +1,238 @@
+/* Private iframe styles. Never target the DSM desktop document. */
+#synowake-app {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: #20313e; background: #f3f6f8; font-size: 14px; line-height: 1.5;
+  --teal: #087f83; --ink: #20313e; --muted: #667987; --line: #dfe8ed;
+  --shadow: 0 5px 20px #1d425c08;
+}
+#synowake-app, #synowake-app * { box-sizing: border-box; }
+#synowake-app { margin: 0; }
+#synowake-app button, #synowake-app input, #synowake-app select { font: inherit; }
+#synowake-app button { cursor: pointer; white-space: nowrap; }
+#synowake-app button:disabled { cursor: default; opacity: .5; }
+#synowake-app button, #synowake-app input, #synowake-app select, #synowake-app summary { outline-offset: 3px; }
+#synowake-app button:focus-visible, #synowake-app input:focus-visible, #synowake-app select:focus-visible, #synowake-app summary:focus-visible { outline: 3px solid #62bbd3; }
+#synowake-app input, #synowake-app select { min-width: 0; }
+#synowake-app input[type=checkbox] { accent-color: var(--teal); width: 16px; height: 16px; margin: 0; flex-shrink: 0; }
+#synowake-app [hidden] { display: none !important; }
+#synowake-app .app-shell { max-width: 1120px; margin: auto; min-height: 100vh; display: flex; flex-direction: column; }
+#synowake-app .app-header { display: flex; align-items: center; gap: 13px; padding: 24px 30px 22px; background: white; }
+#synowake-app .brand-mark { width: 44px; height: 44px; display: grid; place-items: center; font-size: 30px; line-height: 1; color: white; border-radius: 14px; background: linear-gradient(135deg,#139a93,#0b6d95); box-shadow: 0 5px 12px #087f8326; }
+#synowake-app .brand h1 { font-size: 21px; letter-spacing: -.6px; line-height: 1.2; margin: 0 0 4px; }
+#synowake-app .brand p { font-size: 12px; color: var(--muted); margin: 0; }
+#synowake-app .connection { display: flex; gap: 7px; align-items: center; margin-left: auto; font-size: 11px; color: var(--muted); }
+#synowake-app .connection-dot { width: 7px; height: 7px; border-radius: 100%; background: #b2c1cc; }
+#synowake-app .connection-dot.connected { background: #169b79; }
+#synowake-app .connection-dot.error { background: #cb6b48; }
+#synowake-app .tabs { display: flex; padding: 0 30px; gap: 26px; background: white; border-bottom: 1px solid var(--line); }
+#synowake-app .tab { padding: 14px 0; border: 0; border-bottom: 3px solid transparent; background: none; color: #637887; font-weight: 600; font-size: 13px; display: flex; gap: 7px; align-items: center; }
+#synowake-app .tab span { font-size: 18px; font-weight: 400; line-height: 1; }
+#synowake-app .tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+#synowake-app main { padding: 26px 30px 24px; flex: 1; }
+#synowake-app .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 21px; }
+#synowake-app .eyebrow { font-size: 10px; letter-spacing: 1.8px; font-weight: 700; color: var(--teal); }
+#synowake-app h2 { font-size: 24px; font-weight: 650; letter-spacing: -.8px; line-height: 1.25; margin: 5px 0 7px; }
+#synowake-app .page-heading p { font-size: 12px; color: var(--muted); margin: 0; }
+#synowake-app h3 { font-size: 15px; margin: 0; }
+#synowake-app .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid transparent; border-radius: 7px; padding: 9px 14px; font-size: 12px; font-weight: 600; line-height: 1.3; transition: background .15s, transform .15s; }
+#synowake-app .button:active:not(:disabled) { transform: translateY(1px); }
+#synowake-app .primary { background: var(--teal); color: white; box-shadow: 0 2px 5px #087f8310; }
+#synowake-app .primary:hover:not(:disabled) { background: #096e73; }
+#synowake-app .secondary { background: white; border-color: #d6e1e7; color: #3f5868; }
+#synowake-app .secondary:hover:not(:disabled) { background: #f1f6f7; }
+#synowake-app .quiet { background: transparent; color: #617a8c; }
+#synowake-app .quiet:hover:not(:disabled) { background: #e8f0f3; color: var(--teal); }
+#synowake-app .danger { background: #b84d4d; color: white; }
+#synowake-app .danger:hover:not(:disabled) { background: #a33e3e; }
+#synowake-app .compact { padding: 7px 10px; font-size: 11px; }
+#synowake-app .button-row { display: flex; gap: 8px; align-items: center; }
+#synowake-app .summary-bar { display: flex; gap: 12px; margin-bottom: 23px; }
+#synowake-app .summary-chip { display: flex; gap: 8px; align-items: center; background: white; border: 1px solid var(--line); border-radius: 7px; padding: 8px 13px; color: #617484; font-size: 11px; }
+#synowake-app .summary-chip strong { font-size: 15px; color: #304c5e; font-weight: 650; }
+#synowake-app .summary-chip .status-dot { width: 6px; height: 6px; }
+#synowake-app .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+#synowake-app .selection-tools { display: flex; gap: 12px; align-items: center; }
+#synowake-app .check-label { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #566d7c; cursor: pointer; }
+#synowake-app .notify-check { font-size: 10px; }
+#synowake-app .muted { color: var(--muted); font-size: 11px; }
+#synowake-app .device-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 15px; }
+#synowake-app .device-card { border: 1px solid var(--line); border-radius: 12px; background: white; overflow: hidden; box-shadow: var(--shadow); position: relative; transition: border-color .2s,box-shadow .2s; }
+#synowake-app .device-card.selected { border-color: #199997; box-shadow: 0 0 0 1px #199997; }
+#synowake-app .card-top { padding: 18px 18px 9px; display: flex; align-items: center; gap: 12px; }
+#synowake-app .device-icon { width: 43px; height: 43px; border-radius: 11px; display: grid; place-items: center; background: #e9f5f3; color: #187e7d; font-size: 23px; }
+#synowake-app .card-top input { margin-left: auto; }
+#synowake-app .card-text { padding: 0 18px 16px; }
+#synowake-app .card-text h3 { font-size: 15px; font-weight: 650; margin: 3px 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#synowake-app .card-text .address { font-family: Consolas,monospace; font-size: 11px; color: #8b9ca8; letter-spacing: .3px; }
+#synowake-app .card-text .status { margin-top: 10px; }
+#synowake-app .status { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600; color: #6a7c89; background: #eef2f5; border-radius: 20px; padding: 4px 8px; }
+#synowake-app .status-dot { height: 6px; width: 6px; border-radius: 50%; background: #a0adb7; display: inline-block; flex-shrink: 0; }
+#synowake-app .status.online { color: #208566; background: #e6f5ed; }
+#synowake-app .status.online .status-dot { background: #239372; }
+#synowake-app .status.waking { color: #ae7419; background: #fff4df; }
+#synowake-app .status.waking .status-dot { background: #e0a63b; animation: synowake-pulse 1.6s infinite; }
+#synowake-app .status.unknown { color: #6e7e8b; background: #eef2f5; }
+#synowake-app .card-footer { border-top: 1px solid #edf2f5; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; background: #fbfcfd; }
+#synowake-app .wake-button { font-size: 11px; border: 0; color: var(--teal); background: none; font-weight: 650; padding: 5px 0; display: flex; align-items: center; gap: 7px; }
+#synowake-app .wake-button:hover:not(:disabled) { color: #0e5862; }
+#synowake-app .wake-button .power-icon { font-size: 18px; line-height: 1; }
+#synowake-app .icon-button { border: 0; background: none; color: #8ba0ac; padding: 3px 6px; border-radius: 5px; font-size: 19px; line-height: 1.2; }
+#synowake-app .icon-button:hover { background: #e7f0f3; color: #246374; }
+#synowake-app .hint { font-size: 10px; color: #82939e; margin: 17px 0 0; line-height: 1.6; }
+#synowake-app .loading-card, #synowake-app .empty-state { padding: 36px 22px; border: 1px dashed #cadbe3; border-radius: 10px; text-align: center; color: #78909d; font-size: 12px; background: #f9fbfc; grid-column: 1/-1; }
+#synowake-app .empty-state strong { display: block; margin-bottom: 6px; color: #4b6778; font-size: 14px; }
+#synowake-app .empty-state .button { margin-top: 13px; }
+#synowake-app .search-box { display: flex; align-items: center; gap: 9px; background: white; border: 1px solid var(--line); border-radius: 7px; padding: 8px 12px; max-width: 360px; width: 100%; color: #8fa1ac; }
+#synowake-app .search-box input { border: none; outline: none; padding: 0; width: 100%; font-size: 12px; background: none; }
+#synowake-app .table-wrap { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: auto; background: white; box-shadow: var(--shadow); }
+#synowake-app table { border-collapse: collapse; width: 100%; text-align: left; white-space: nowrap; }
+#synowake-app th { background: #f9fbfc; color: #788b98; font-size: 10px; font-weight: 600; padding: 12px 15px; border-bottom: 1px solid var(--line); }
+#synowake-app td { padding: 14px 15px; font-size: 12px; border-bottom: 1px solid #edf2f5; }
+#synowake-app tbody tr:last-child td { border-bottom: 0; }
+#synowake-app .device-name { font-weight: 600; }
+#synowake-app .monospace { font-family: Consolas,monospace; color: #738997; font-size: 11px; }
+#synowake-app .row-actions { display: flex; justify-content: flex-end; gap: 4px; }
+#synowake-app .row-actions .button { font-size: 10px; padding: 6px 7px; }
+#synowake-app .notice { display: flex; gap: 12px; padding: 13px 15px; font-size: 11px; border: 1px solid; border-radius: 8px; line-height: 1.6; margin-bottom: 17px; }
+#synowake-app .notice.info { color: #537b8c; background: #edf6fa; border-color: #d8eaf2; }
+#synowake-app .notice.info>span { font-size: 22px; line-height: 1.1; }
+#synowake-app .notice.warning { background: #fff8e9; color: #94702e; border-color: #f0dfb8; }
+#synowake-app .notice.error { background: #fff0ee; color: #a64642; border-color: #f2d5d0; }
+#synowake-app .notice .button { margin-left: auto; }
+#synowake-app .diagnostics:empty { display: none; }
+#synowake-app .schedule-list { display: grid; gap: 11px; margin-top: 21px; }
+#synowake-app .schedule-card { padding: 16px 17px; background: white; border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow); }
+#synowake-app .schedule-time { min-width: 68px; font-size: 25px; line-height: 1.2; font-weight: 650; letter-spacing: -1px; color: #216770; }
+#synowake-app .schedule-info { flex: 1; min-width: 0; }
+#synowake-app .schedule-info h3 { font-size: 13px; margin: 0 0 4px; }
+#synowake-app .schedule-meta { font-size: 10px; color: #8496a2; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+#synowake-app .schedule-disabled { opacity: .65; }
+#synowake-app .toggle { position: relative; display: inline-flex; align-items: center; gap: 7px; font-size: 10px; color: #80949f; cursor: pointer; }
+#synowake-app .toggle input { position: absolute; opacity: 0; width: 34px; height: 20px; }
+#synowake-app .toggle-track { width: 34px; height: 20px; background: #d4dfe4; border-radius: 14px; display: block; transition: background .2s; }
+#synowake-app .toggle-track, #synowake-app .weekday span { pointer-events: none; }
+#synowake-app .toggle-track:after { content: ""; height: 14px; width: 14px; position: absolute; left: 3px; top: 3px; border-radius: 100%; background: white; box-shadow: 0 1px 3px #26495730; transition: transform .2s; }
+#synowake-app .toggle input:checked+.toggle-track { background: #168f89; }
+#synowake-app .toggle input:checked+.toggle-track:after { transform: translateX(14px); }
+#synowake-app .toggle input:focus-visible+.toggle-track { outline: 3px solid #62bbd3; outline-offset: 3px; }
+#synowake-app .section-heading { display: flex; justify-content: space-between; align-items: center; margin-top: 28px; margin-bottom: 4px; }
+#synowake-app .log-hint { margin: 0 0 12px; }
+#synowake-app .log-list { border: 1px solid var(--line); border-radius: 9px; background: white; overflow: hidden; }
+#synowake-app .log-row { display: flex; align-items: flex-start; gap: 11px; padding: 11px 15px; border-bottom: 1px solid #edf2f5; font-size: 11px; }
+#synowake-app .log-row:last-child { border: 0; }
+#synowake-app .log-icon { height: 20px; width: 20px; display: grid; place-items: center; color: #258c72; background: #e7f5ef; border-radius: 100%; font-size: 11px; flex-shrink: 0; }
+#synowake-app .log-icon.failed { background: #ffefed; color: #b35751; }
+#synowake-app .log-content { min-width: 0; flex: 1; }
+#synowake-app .log-title { color: #476170; }
+#synowake-app .log-detail { font-size: 10px; color: #8295a1; margin-top: 2px; overflow-wrap: anywhere; }
+#synowake-app .log-date { font-size: 10px; color: #8597a4; white-space: nowrap; padding-top: 2px; }
+#synowake-app footer { border-top: 1px solid #e1e9ed; padding: 13px 30px; display: flex; justify-content: space-between; color: #94a5af; font-size: 10px; }
+#synowake-app .demo-badge { font-size: 10px; font-weight: 700; border: 1px solid #e5cf8e; color: #9d7827; background: #fff6da; border-radius: 4px; padding: 3px 6px; letter-spacing: .7px; }
+#synowake-app dialog { border: none; border-radius: 15px; padding: 25px; width: min(470px,calc(100% - 32px)); box-shadow: 0 20px 70px #14344730; color: var(--ink); max-height: calc(100vh - 36px); overflow: auto; }
+#synowake-app dialog::backdrop { background: #17364566; backdrop-filter: blur(3px); }
+#synowake-app dialog.wide-dialog { width: min(650px,calc(100% - 32px)); }
+#synowake-app .dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 22px; }
+#synowake-app .dialog-heading h2 { font-size: 21px; margin-bottom: 0; }
+#synowake-app .dialog-heading .icon-button { margin-right: -7px; margin-top: -5px; font-size: 24px; }
+#synowake-app .dialog-copy { font-size: 12px; color: #6b808e; margin: 0 0 20px; }
+#synowake-app .field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 17px; font-size: 11px; font-weight: 600; color: #516b7b; }
+#synowake-app .field input, #synowake-app .field select { padding: 10px 11px; border: 1px solid #cedee5; background: white; border-radius: 6px; font-size: 12px; color: #2e4e61; width: 100%; font-weight: 400; line-height: 1.35; }
+#synowake-app .field input::placeholder { color: #9cabb4; }
+#synowake-app .field-help { font-size: 10px; font-weight: 400; color: #8a9da8; }
+#synowake-app .field-row { display: flex; gap: 12px; }
+#synowake-app .field-row>.field { flex: 1; }
+#synowake-app .field-row>.small { flex: 0 0 105px; }
+#synowake-app .advanced { margin-bottom: 21px; }
+#synowake-app .advanced summary { font-size: 11px; color: #6d8493; cursor: pointer; padding: 3px 0; margin-bottom: 13px; }
+#synowake-app .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 23px; padding-top: 18px; border-top: 1px solid #e7eef1; }
+#synowake-app .form-error { border-radius: 6px; background: #fff0ed; color: #a44d43; font-size: 11px; padding: 10px 12px; margin: 14px 0; overflow-wrap: anywhere; }
+#synowake-app .form-check { margin: 13px 0; font-size: 11px; }
+#synowake-app .weekday-options { display: flex; justify-content: space-between; gap: 6px; }
+#synowake-app .weekday { position: relative; flex: 1; text-align: center; cursor: pointer; }
+#synowake-app .weekday input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+#synowake-app .weekday span { display: block; border: 1px solid #d9e4e9; border-radius: 6px; padding: 8px 3px; font-size: 11px; font-weight: 500; background: white; color: #7a8e9b; }
+#synowake-app .weekday input:checked+span { color: var(--teal); background: #e5f4f1; border-color: #82c4b9; }
+#synowake-app .weekday input:focus-visible+span { outline: 3px solid #62bbd3; outline-offset: 2px; }
+#synowake-app .preset-days { display: flex; gap: 3px; margin-top: 5px; }
+#synowake-app .scan-form { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 15px; }
+#synowake-app .scan-form .field { margin: 0; flex: 1; }
+#synowake-app .scan-form .button { min-height: 39px; }
+#synowake-app .discover-results { display: grid; gap: 9px; }
+#synowake-app .discover-row { display: flex; gap: 11px; align-items: center; padding: 12px; border: 1px solid #dde8ed; border-radius: 8px; background: #fbfcfd; }
+#synowake-app .discover-row .field { margin: 0; flex: 1; min-width: 0; gap: 4px; }
+#synowake-app .discover-row .field input { padding: 6px 8px; font-size: 11px; }
+#synowake-app .discover-address { min-width: 150px; font-size: 10px; color: #7a8e9c; }
+#synowake-app .discover-address span { display: block; }
+#synowake-app .discover-type { color: #9cabb3; }
+#synowake-app .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10; background: #244e5d; color: white; padding: 12px 18px; border-radius: 8px; box-shadow: 0 4px 22px #163a542e; font-size: 12px; max-width: min(640px,calc(100% - 32px)); overflow-wrap: anywhere; }
+#synowake-app .toast.error { background: #a14b46; }
+#synowake-app .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+#synowake-app .log-settings { margin-top: 18px; border: 1px solid var(--line); background: #f9fbfc; border-radius: 8px; padding: 13px 15px; }
+#synowake-app .log-settings summary { font-size: 11px; color: #587383; cursor: pointer; }
+#synowake-app .log-settings .hint { margin: 12px 0 16px; }
+#synowake-app .log-settings .scan-form { max-width: 370px; }
+#synowake-app .log-settings .field { max-width: 180px; }
+#synowake-app .log-settings .scan-form .button { margin-bottom: 21px; }
+#synowake-app .center-pending { color: #ad862d; }
+@keyframes synowake-pulse { 50% { opacity: .3; } }
+@media(prefers-reduced-motion:reduce) { #synowake-app, #synowake-app *, #synowake-app *:before, #synowake-app *:after { animation: none !important; transition: none !important; } }
+@media(max-width:760px) {
+  #synowake-app .app-header { padding: 19px 21px; }
+  #synowake-app .connection { max-width: 135px; }
+  #synowake-app .tabs { padding: 0 21px; }
+  #synowake-app .page-heading { align-items: flex-start; flex-wrap: wrap; }
+  #synowake-app .page-heading>.button { margin-top: 5px; }
+  #synowake-app main { padding: 22px 21px; }
+  #synowake-app .device-grid { grid-template-columns: repeat(auto-fill,minmax(210px,1fr)); }
+  #synowake-app .dashboard-toolbar { align-items: flex-start; flex-wrap: wrap; }
+  #synowake-app .notify-check { margin-left: 0; }
+  #synowake-app .schedule-card { gap: 12px; }
+  #synowake-app .schedule-time { min-width: 62px; font-size: 23px; }
+  #synowake-app .schedule-card .row-actions { gap: 1px; }
+  #synowake-app .schedule-card .row-actions .button { font-size: 10px; padding: 6px; }
+  #synowake-app footer { padding: 13px 21px; }
+}
+@media(max-width:510px) {
+  #synowake-app .brand p { display: none; }
+  #synowake-app .brand h1 { margin: 0; }
+  #synowake-app .connection { font-size: 10px; max-width: 115px; }
+  #synowake-app .brand-mark { width: 38px; height: 38px; font-size: 26px; border-radius: 12px; }
+  #synowake-app .app-header { gap: 10px; padding: 16px; }
+  #synowake-app .tabs { padding: 0 16px; gap: 23px; }
+  #synowake-app .tab { font-size: 12px; }
+  #synowake-app main { padding: 20px 16px; }
+  #synowake-app h2 { font-size: 22px; }
+  #synowake-app .summary-bar { gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  #synowake-app .summary-chip { padding: 7px 10px; font-size: 10px; }
+  #synowake-app .selection-tools { gap: 8px; flex-wrap: wrap; }
+  #synowake-app .selection-tools .check-label { font-size: 10px; }
+  #synowake-app .device-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  #synowake-app .card-top { padding: 13px 12px 8px; }
+  #synowake-app .device-icon { width: 35px; height: 35px; font-size: 20px; }
+  #synowake-app .card-text { padding: 0 12px 12px; }
+  #synowake-app .card-text h3 { font-size: 12px; }
+  #synowake-app .card-text .address { font-size: 10px; }
+  #synowake-app .card-footer { padding: 9px 11px; gap: 4px; }
+  #synowake-app .wake-button { font-size: 10px; gap: 3px; }
+  #synowake-app .status { font-size: 9px; padding: 3px 6px; }
+  #synowake-app .card-footer .icon-button { padding: 3px; font-size: 16px; }
+  #synowake-app .schedule-card { display: grid; grid-template-columns: 65px 1fr; gap: 10px 12px; padding: 14px; }
+  #synowake-app .schedule-card .toggle { grid-column: 1; justify-self: start; }
+  #synowake-app .schedule-card .row-actions { grid-column: 2; justify-content: flex-end; }
+  #synowake-app .log-row { gap: 8px; padding: 11px; }
+  #synowake-app .log-date { font-size: 9px; }
+  #synowake-app .field-row { flex-wrap: wrap; }
+  #synowake-app .field-row>.field { flex: 1 1 160px; }
+  #synowake-app .field-row>.small { flex: 1 1 105px; }
+  #synowake-app .discover-row { align-items: flex-start; flex-wrap: wrap; }
+  #synowake-app .discover-address { margin-left: 27px; flex-basis: 100%; min-width: 0; }
+  #synowake-app .discover-address span { display: inline; margin-right: 12px; }
+  #synowake-app .scan-form { flex-wrap: wrap; }
+  #synowake-app .scan-form .field { flex-basis: 100%; }
+  #synowake-app dialog { padding: 21px; }
+  #synowake-app .button-row { flex-wrap: wrap; }
+  #synowake-app .notice { flex-wrap: wrap; }
+  #synowake-app .demo-badge { margin-left: auto; }
+  #synowake-app .demo-badge:not([hidden])+.connection { display: none; }
+}
+@media(max-width:340px) { #synowake-app .device-grid { grid-template-columns: 1fr; } #synowake-app .tabs { gap: 17px; } #synowake-app .brand h1 { font-size: 19px; } }
