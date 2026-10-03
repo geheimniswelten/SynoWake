@@ -71,9 +71,15 @@ async function run() {
   await page.locator('#discover-open').click();
   await page.locator('#discover-form button').click();
   await page.locator('.discover-row').first().waitFor();
-  assert.equal(await page.locator('.discover-row').count(), 2);
+  assert.equal(await page.locator('.discover-row').count(), 4);
   assert.equal(await page.locator('.discover-row input[type=checkbox]:checked').count(), 0, 'Search starts with no selected results');
   assert.equal(await page.locator('#discover-import').isDisabled(), true);
+  assert.equal(await page.locator('.discover-row.discover-existing').count(), 2, 'Both saved devices remain recognizable');
+  assert.equal(await page.locator('.discover-row.discover-existing .discover-present:visible').count(), 2);
+  assert.equal(await page.locator('.discover-row.discover-existing input[type=checkbox]:disabled').count(), 2);
+  assert.equal(await page.locator('.discover-row.discover-existing input[type=text]:disabled').count(), 2);
+  assert.equal(await page.locator('.discover-row:not(.discover-existing) .discover-present:visible').count(), 0, 'New devices must not show the existing marker');
+  await page.screenshot({path: path.join(screenshots, 'synowake-discovery-existing.png'), fullPage: true});
   assert.equal(await page.locator('.discover-row label').first().textContent(), 'Name');
   assert.equal(await page.locator('.discover-row input[type=text]').first().inputValue(), 'Wohnzimmer-PC');
   await page.locator('.discover-row input[type=text]').first().fill('Wohnzimmer');
@@ -124,7 +130,7 @@ async function run() {
   const deviceId = 'a'.repeat(32);
   const scheduleId = 'b'.repeat(32);
   const command = `'bin/synowake' '--run-schedule' '${scheduleId}' '--token' '${'c'.repeat(64)}'`;
-  const data = {user: 'tester', version: '0.1.5-0006', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
+  const data = {user: 'tester', version: '0.1.6-0007', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
   const networks = [
     {interface: 'eth0', ip: '192.167.178.21', cidr: '192.167.178.0/24', searchCidr: '192.167.178.0/24', broadcast: '192.167.178.255'},
     {interface: 'eth1', ip: '10.42.0.130', cidr: '10.42.0.128/25', searchCidr: '10.42.0.128/25', broadcast: '10.42.0.255'}
@@ -164,7 +170,8 @@ async function run() {
     if (action === 'status') result = {devices: [{id: deviceId, status: 'offline'}]};
     if (action === 'discover') {
       assert.ok(['192.167.178.0/24', '192.167.178.64/26'].includes(payload.cidr)); searches.push(payload.cidr); data.discoveryCidr = payload.cidr;
-      result = {devices: [{name: 'Entdeckt <strong>PC</strong>.fritz.box', ip: '192.167.178.70', mac: '02:11:22:33:44:55', type: 'LAN-Gerät', broadcast: '192.167.178.255'}], warnings: []};
+      const existing = data.devices.some(device => device.mac === '02:11:22:33:44:55');
+      result = {devices: [{name: 'Entdeckt <strong>PC</strong>.fritz.box', ip: existing ? '192.167.178.71' : '192.167.178.70', mac: existing ? '02-11-22-33-44-55' : '02:11:22:33:44:55', type: 'LAN-Gerät', broadcast: '192.167.178.255'}], warnings: []};
     }
     if (action === 'device-save') {
       assert.equal(payload.ip, '192.167.178.70'); assert.equal(payload.broadcast, '192.167.178.255');
@@ -191,7 +198,7 @@ async function run() {
   });
   await production.goto(base);
   const assetRequests = await production.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name));
-  for (const asset of ['app.js', 'scheduler.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.5-0006`)), `Cache version missing for ${asset}`);
+  for (const asset of ['app.js', 'scheduler.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.6-0007`)), `Cache version missing for ${asset}`);
   await production.locator('.status.offline').first().waitFor();
   await production.locator('[data-tab=devices]').click();
   await production.locator('#discover-open').click();
@@ -225,8 +232,16 @@ async function run() {
   await production.locator('#discover-dialog').waitFor({state: 'hidden'});
   assert.equal(imports.length, 1); assert.equal(imports[0].name, 'Büro-PC'); assert.equal(searches.length, 2);
   await production.locator('#discover-open').click();
+  await production.locator('#discover-dialog').waitFor({state: 'visible'});
   await cidrField.fill('192.167.178.64/26'); await production.locator('#discover-form button').click();
   await production.locator('.discover-row').first().waitFor();
+  assert.equal(await production.locator('.discover-row.discover-existing').count(), 1, 'Saved MAC recognized despite changed IP and MAC formatting');
+  assert.equal(await production.locator('.discover-row .discover-present').isVisible(), true);
+  assert.equal(await production.locator('.discover-row input[type=checkbox]').isDisabled(), true);
+  assert.equal(await production.locator('.discover-row input[type=checkbox]').isChecked(), false);
+  assert.equal(await production.locator('.discover-row input[type=text]').inputValue(), 'Büro-PC', 'Existing row uses the saved name');
+  assert.equal(await production.locator('.discover-row input[type=text]').isDisabled(), true);
+  assert.equal(imports.length, 1, 'Repeated search must not create a duplicate');
   assert.equal(await production.locator('#discover-import').isDisabled(), true, 'Repeated searches reset result selection');
   await production.reload(); await production.locator('.status.offline').first().waitFor();
   await production.locator('[data-tab=devices]').click(); await production.locator('#discover-open').click();
@@ -307,5 +322,6 @@ async function run() {
   fs.writeFileSync(path.join(screenshots, 'css-isolation-result.json'), JSON.stringify(cssResult, null, 2));
   console.log(`PASS: CSS isolation: ${cssResult.rules} scoped rules, external styles and dimensions unchanged at ${cssResult.widths.join('/')} px.`);
   console.log('PASS: Favorites persist, failed saves revert, bulk selection excludes hidden devices; discovery opt-in and local DNS names; manual network remembered after reload; versioned assets loaded.');
+  console.log('PASS: Existing discovery results remain visible, show saved names and a marker, and cannot be imported twice; MAC match survives changed IP and formatting.');
 }
 run().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); server.close(); });

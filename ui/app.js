@@ -1,7 +1,7 @@
-import {DsmScheduler, getSynoToken} from './scheduler.js?v=0.1.5-0006';
+import {DsmScheduler, getSynoToken} from './scheduler.js?v=0.1.6-0007';
 
 const $ = selector => document.querySelector(selector);
-const uiVersion = '0.1.5-0006';
+const uiVersion = '0.1.6-0007';
 const demo = new URLSearchParams(location.search).get('demo') === '1';
 const scheduler = new DsmScheduler();
 const selected = new Set();
@@ -83,6 +83,7 @@ async function refreshState() {
   state = {...state, ...data, devices: data.devices || [], schedules: data.schedules || [], logs: data.logs || [], diagnostics: data.diagnostics || []};
   for (const id of selected) if (!favoriteDevices().some(device => device.id === id)) selected.delete(id);
   render();
+  updateDiscoveryPresence();
   connected(true, demo ? 'Lokale Vorschau · Beispieldaten' : undefined);
 }
 
@@ -434,14 +435,40 @@ function renderDiscovery() {
   const target = $('#discover-results'); target.replaceChildren();
   for (const [index, device] of scanResults.entries()) {
     const row = element('div', 'discover-row');
+    row.dataset.index = index;
     const check = element('input'); check.type = 'checkbox'; check.dataset.index = index; check.checked = false; check.disabled = !device.mac;
     check.setAttribute('aria-label', `${device.ip} übernehmen`); check.addEventListener('change', updateImportButton);
     const label = element('label', 'field', 'Name');
     const name = element('input'); name.type = 'text'; name.value = discoveryName(device.name) || device.type || device.ip; name.maxLength = 80; name.dataset.index = index;
     label.append(name);
     const address = element('div', 'discover-address'); address.append(element('span', '', device.ip), element('span', 'monospace', device.mac || 'Keine MAC ermittelt'));
+    const presence = element('span', 'discover-present', 'Bereits vorhanden'); presence.hidden = true; address.prepend(presence);
     if (device.type) address.append(element('span', 'discover-type', device.type));
     row.append(check, label, address); target.append(row);
+  }
+  updateDiscoveryPresence();
+}
+
+function savedDiscoveryDevice(device) {
+  const normalize = value => String(value || '').trim().replace(/-/g, ':').toUpperCase();
+  const mac = normalize(device.mac);
+  if (!mac) return undefined;
+  return state.devices.find(existing => normalize(existing.mac) === mac);
+}
+
+function updateDiscoveryPresence() {
+  for (const row of $('#discover-results').querySelectorAll('.discover-row')) {
+    const device = scanResults[Number(row.dataset.index)];
+    const existing = savedDiscoveryDevice(device);
+    const check = row.querySelector('input[type=checkbox]');
+    const name = row.querySelector('input[type=text]');
+    row.classList.toggle('discover-existing', Boolean(existing));
+    row.querySelector('.discover-present').hidden = !existing;
+    check.disabled = Boolean(existing) || !device.mac;
+    check.title = existing ? `Bereits in der Geräteliste: ${existing.name}` : '';
+    check.setAttribute('aria-label', existing ? `${device.ip}: Bereits vorhanden` : `${device.ip} übernehmen`);
+    name.disabled = Boolean(existing);
+    if (existing) { check.checked = false; name.value = existing.name; }
   }
   updateImportButton();
 }
@@ -452,7 +479,7 @@ function discoveryName(name = '') {
 
 function updateImportButton() {
   const count = $('#discover-results').querySelectorAll('input[type=checkbox]:checked:not(:disabled)').length;
-  $('#discover-import').disabled = !count;
+  $('#discover-import').disabled = !count || Boolean($('#discover-dialog').dataset.busy);
   $('#discover-import').textContent = count ? `${count} ${count === 1 ? 'Gerät' : 'Geräte'} übernehmen` : 'Auswahl übernehmen';
 }
 
@@ -533,12 +560,13 @@ $('#discover-form').addEventListener('submit', async event => {
     for (const warning of data.warnings || []) $('#discover-warnings').append(element('div', 'notice warning', warning.message || warning));
     $('#discover-progress').textContent = scanResults.length ? `${scanResults.length} ${scanResults.length === 1 ? 'Gerät gefunden' : 'Geräte gefunden'}. Namen vor der Übernahme anpassen.` : 'Keine Geräte gefunden. Netzbereich und Erreichbarkeit prüfen.';
   } catch (error) { $('#discover-warnings').append(element('div', 'notice error', error.message)); $('#discover-progress').textContent = ''; }
-  finally { submit.disabled = false; delete $('#discover-dialog').dataset.busy; }
+  finally { submit.disabled = false; delete $('#discover-dialog').dataset.busy; updateImportButton(); }
 });
 $('#discover-import').addEventListener('click', async event => {
   const submit = event.currentTarget; submit.disabled = true; $('#discover-dialog').dataset.busy = 'true';
   let count = 0;
   try {
+    await refreshState();
     for (const check of $('#discover-results').querySelectorAll('input[type=checkbox]:checked:not(:disabled)')) {
       const index = Number(check.dataset.index); const device = scanResults[index];
       const name = $('#discover-results').querySelector(`input[type=text][data-index="${index}"]`).value.trim() || discoveryName(device.name) || device.type || device.ip;
@@ -550,7 +578,7 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.5-0006', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.6-0007', diagnostics: [], settings: {logCenterPort: 0}, active: true,
   networks: [{interface: 'Demo-LAN', ip: '192.168.1.2', cidr: '192.168.1.0/24', searchCidr: '192.168.1.0/24', broadcast: '192.168.1.255'}],
   devices: [
     {id: 'demo1', name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true, status: 'offline'},
@@ -593,7 +621,7 @@ async function demoApi(action, payload = {}) {
         setTimeout(() => { device.status = 'online'; pollStatus(); }, 5500);
       }
       return {};
-    case 'discover': demoState.discoveryCidr = payload.cidr; return {devices: [{name: 'Wohnzimmer-PC.fritz.box', ip: '192.168.1.70', mac: 'A0:B1:C2:D3:E4:05', type: 'Computer'}, {name: '', ip: '192.168.1.80', mac: 'A0:B1:C2:D3:E4:06', type: 'Netzwerkgerät'}], warnings: []};
+    case 'discover': demoState.discoveryCidr = payload.cidr; return {devices: [{name: 'Wohnzimmer-PC.fritz.box', ip: '192.168.1.70', mac: 'A0:B1:C2:D3:E4:05', type: 'Computer'}, {name: '', ip: '192.168.1.80', mac: 'A0:B1:C2:D3:E4:06', type: 'Netzwerkgerät'}, ...demoState.devices.slice(0, 2).map(device => ({name: device.name, ip: device.ip, mac: device.mac, type: 'Computer'}))], warnings: []};
     case 'schedule-prepare': {
       const schedule = {...payload, id: payload.id || `demo-schedule-${Date.now()}`}; demoPrepared.set(schedule.id, schedule); return {schedule, command: 'DEMO', owner: demoState.user};
     }

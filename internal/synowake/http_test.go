@@ -85,6 +85,33 @@ func testDevice(t *testing.T, a *App) Device {
 	return d
 }
 
+func TestDeviceCreationRejectsAlreadySavedMACWithoutChangingExistingDevice(t *testing.T) {
+	a := testApp(t)
+	d := testDevice(t, a)
+	before := testStore(t, a).Devices[0]
+	for _, mac := range []string{"02:11:22:33:44:55", "02-11-22-33-44-55"} {
+		duplicate := Device{Name: "Anderer DNS-Name", IP: "192.168.1.70", MAC: mac}
+		result := testServe(t, a, testRequest(t, a, "POST", "device-save", duplicate), 400)
+		if !strings.Contains(result.Error, "bereits vorhanden") {
+			t.Fatalf("missing duplicate explanation: %s", result.Error)
+		}
+		devices := testStore(t, a).Devices
+		if len(devices) != 1 || devices[0] != before {
+			t.Fatal("duplicate import changed the existing device or inventory")
+		}
+	}
+	d.Name = "Manuell bearbeitet"
+	testServe(t, a, testRequest(t, a, "POST", "device-save", d), 200)
+	if testStore(t, a).Devices[0].Name != d.Name {
+		t.Fatal("duplicate protection prevented editing the existing device")
+	}
+	other := Device{Name: "Andere Netzwerkkarte", IP: d.IP, MAC: "02:11:22:33:44:66"}
+	testServe(t, a, testRequest(t, a, "POST", "device-save", other), 200)
+	if len(testStore(t, a).Devices) != 2 {
+		t.Fatal("IP equality falsely classified a different MAC as already saved")
+	}
+}
+
 func TestHTTPRequiresSessionBoundCSRFAndSameOrigin(t *testing.T) {
 	a := testApp(t)
 	state := testServe(t, a, testRequest(t, a, "GET", "state", nil), 200)

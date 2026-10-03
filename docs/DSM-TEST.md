@@ -18,6 +18,7 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Mehrere aktive Schnittstellen prüfen | NAS-IP, Schnittstelle und echtes Netz sind auswählbar; nicht aktive, Loopback- und `169.254.*`-Schnittstellen fehlen. |
 | Lokales `/24` suchen, auch `192.167.178.0/24` | Erreichbare LAN-Nachbarn mit MAC erscheinen; Treffer samt lokalem Broadcast lassen sich übernehmen und speichern. |
 | Suchtreffer übernehmen | Alle Häkchen sind zunächst leer. Nur angehakte Treffer werden übernommen und beginnen ohne Favoriten-Häkchen. |
+| Gespeicherte Geräte erneut suchen | Treffer bleiben sichtbar, zeigen „Bereits vorhanden“ und ihren gespeicherten Namen. Häkchen und Namensfeld sind gesperrt; es entsteht kein doppelter Eintrag. Eine geänderte IP bei gleicher MAC ändert diese Erkennung nicht. |
 | Namen in der Suche prüfen | Feld heißt „Name“; beispielsweise `ACER-Frank.fritz.box` wird als `ACER-Frank` vorgeschlagen und bleibt bearbeitbar. |
 | Erfolgreich eingegebenen Suchbereich wieder öffnen | Nach DSM-Neuladen oder Paketneustart wird der gespeicherte Bereich wieder angeboten, sofern er noch innerhalb eines aktiven NAS-Netzes liegt. |
 | Tatsächliches `/25` bis `/30` prüfen | Suchvorschlag behält die Netzmaske; über das angeschlossene Netz hinausgehende Bereiche werden abgewiesen. |
@@ -43,7 +44,7 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 
 ## Diagnose bei einem Fehler
 
-Zusätzlich Paket-Zentrum und Widgets offen halten, SynoWake stoppen/starten und das App-Fenster öffnen/schließen. Texte, Zeilenhöhen, Symbole und Formularfelder außerhalb von SynoWake müssen unverändert bleiben. Nach dem Upgrade DSM einmal vollständig neu laden (ggf. Strg+F5), damit bereits geladene Dateien der alten Version entfernt werden. Geräte, Zeitpläne und Ausführungsprotokolle müssen beim Upgrade erhalten bleiben. In 0.1.5 beginnen vorhandene Geräte ohne bisheriges Favoritenfeld ohne Häkchen; gewünschte Kacheln einmal in der Geräteliste markieren.
+Zusätzlich Paket-Zentrum und Widgets offen halten, SynoWake stoppen/starten und das App-Fenster öffnen/schließen. Texte, Zeilenhöhen, Symbole und Formularfelder außerhalb von SynoWake müssen unverändert bleiben. Nach dem Upgrade DSM einmal vollständig neu laden, damit bereits geladene Dateien der alten Version entfernt werden; beim beschriebenen Firefox-Ablauf mit Shift+Klick auf den Aktualisieren-Knopf. Geräte, Zeitpläne, bereits gesetzte Favoriten und Ausführungsprotokolle müssen beim Upgrade erhalten bleiben. Bei einem Upgrade von vor 0.1.5 beginnen vorhandene Geräte ohne bisheriges Favoritenfeld ohne Häkchen; gewünschte Kacheln einmal in der Geräteliste markieren.
 
 Das sichtbare Fehlerbild, die DSM-Version, die Uhrzeit und die Aktion festhalten. Im SynoWake-Protokoll die Diagnose ansehen. Bei Problemen mit Installation oder Start zusätzlich `/var/log/packages/SynoWake.log` und die DSM-Paketbetriebsprotokolle prüfen. Die private Dateiablage in `/var/packages/SynoWake/var` enthält Zeitplan-Geheimnisse und gehört nicht in ungeschwärzte Supportberichte.
 

@@ -231,6 +231,9 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			err = a.update(func(s *Store) error {
 				for i, old := range s.Devices {
+					if d.ID == "" && strings.EqualFold(old.MAC, d.MAC) {
+						return errors.New("Gerät mit dieser MAC-Adresse bereits vorhanden: " + old.Name)
+					}
 					if old.ID == d.ID {
 						d.LastWake = old.LastWake
 						d.WakeState = old.WakeState
