@@ -19,6 +19,7 @@ type Device struct {
 	Broadcast string    `json:"broadcast"`
 	Port      int       `json:"port"`
 	Favorite  bool      `json:"favorite"`
+	WebPorts  string    `json:"webPorts,omitempty"`
 	LastWake  time.Time `json:"lastWake,omitempty"`
 	WakeState string    `json:"wakeState,omitempty"`
 }
@@ -132,6 +133,15 @@ func validateDeviceForNetworks(d *Device, networks []LocalNetwork) error {
 	}
 	if d.Port < 1 || d.Port > 65535 {
 		return errors.New("UDP-Port muss zwischen 1 und 65535 liegen.")
+	}
+	ports, err := parseWebPorts(d.WebPorts)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(d.WebPorts) != "" {
+		d.WebPorts = formatWebPorts(ports)
+	} else {
+		d.WebPorts = ""
 	}
 	if d.ID != "" && !safeID.MatchString(d.ID) {
 		return errors.New("Ungültige Geräte-ID.")

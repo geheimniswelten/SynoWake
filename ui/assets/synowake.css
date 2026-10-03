@@ -70,6 +70,19 @@
 #synowake-app .status-dot { height: 6px; width: 6px; border-radius: 50%; background: #a0adb7; display: inline-block; flex-shrink: 0; }
 #synowake-app .status.online { color: #208566; background: #e6f5ed; }
 #synowake-app .status.online .status-dot { background: #239372; }
+#synowake-app button.status { border: 0; font: inherit; font-size: 10px; font-weight: 600; }
+#synowake-app button.status:hover { background: #d2eddf; }
+#synowake-app .web-arrow { font-size: 12px; line-height: 1; }
+#synowake-app .web-pages { display: grid; gap: 9px; }
+#synowake-app .web-page { display: flex; gap: 14px; align-items: center; justify-content: space-between; text-decoration: none; color: var(--teal); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: #f7fbfa; }
+#synowake-app .web-page:hover { background: #e8f5f0; border-color: #8fc7b7; }
+#synowake-app .web-page:focus-visible { outline: 3px solid #62bbd3; outline-offset: 3px; }
+#synowake-app .web-page-text { display: grid; gap: 3px; min-width: 0; }
+#synowake-app .web-page-text strong { font-size: 12px; }
+#synowake-app .web-page-text .monospace { overflow-wrap: anywhere; }
+#synowake-app .web-page-arrow { font-size: 20px; flex-shrink: 0; }
+#synowake-app #web-dialog .dialog-heading>div { min-width: 0; }
+#synowake-app #web-dialog h2 { overflow-wrap: anywhere; }
 #synowake-app .status.waking { color: #ae7419; background: #fff4df; }
 #synowake-app .status.waking .status-dot { background: #e0a63b; animation: synowake-pulse 1.6s infinite; }
 #synowake-app .status.unknown { color: #6e7e8b; background: #eef2f5; }

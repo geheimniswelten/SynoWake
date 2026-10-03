@@ -6,7 +6,13 @@ Wake-on-LAN application for a Synology **DS918+ running DSM 7.1**. Both the pack
 
 The application opens in a DSM window with favorite device tiles, a searchable device list and an automation tab with execution logs. Schedules are created, edited and deleted through the existing DSM session using `SYNO.Core.TaskScheduler`. SynoWake does not modify `/etc/crontab` or `task_config.xml`.
 
-**Version 0.1.14-0015: schedule deletion on DSM 7.1 fixed.** The complete inventory uses `list` version 2, matching Synology's native interface. Only this read-only method may try version 3 after explicit method/version rejection (103/104). Owner, SynoWake prefix and exact wake command are still checked before deletion. Ambiguous deletion responses are reconciled using a complete inventory without another delete request. Creation, editing and enable/disable were confirmed on the target NAS; the corrected deletion flow passed local tests and still needs NAS confirmation.
+**Version 1.0.0-0017:** The package version, runtime display and cache URLs use `1.0.0-0017`. The BETA flag is removed; build number `0017` is retained.
+
+**Version 0.1.16-0017: more time for web interfaces.** The HTTP-header deadline increases from 800 ms to 3 seconds; each HTTP/HTTPS request may take up to 4 seconds. Configured ports are still checked in parallel, with a shared maximum of 8 seconds. This accommodates delayed DSM login pages instead of missing them after less than a second. A regression test deliberately delays an HTTP response by 1.2 seconds. The precise cause of the earlier intermittent NAS results remains unconfirmed.
+
+**Version 0.1.15-0016: device web interfaces.** Device settings accept up to 16 web ports. An empty field uses `5000, 80, 8080`, including existing records. Click **Online ↗** on a tile or device row to open the popup. The NAS checks those ports for HTTP/HTTPS, including self-signed TLS for detection, and offers responding web interfaces as links. Probes do not follow redirects or forward cookies or DSM session data. Links open new browser tabs without access to the DSM opener or its referrer. Normal browser certificate checks still apply when opening a page. The popup supports checking again. Browser LAN access cannot be established reliably, so the popup remains available; device-IP links require LAN/VPN access. Regular online checks are independent of these web ports.
+
+**Version 0.1.14-0015: schedule deletion on DSM 7.1 fixed.** The complete inventory uses `list` version 2, matching Synology's native interface. Only this read-only method may try version 3 after explicit method/version rejection (103/104). Owner, SynoWake prefix and exact wake command are still checked before deletion. Ambiguous deletion responses are reconciled using a complete inventory without another delete request. Creation, editing and enable/disable were confirmed on the target NAS; the corrected deletion flow was also confirmed on the NAS.
 
 **Version 0.1.13-0014: short WoL intervals and complete German/English product texts.** Each wake action sends three identical Magic Packets with a 20 ms pause between packets. The burst remains one wake action with one execution record. Missing status responses do not trigger another transmission.
 
@@ -36,7 +42,7 @@ Or package a previously built static binary:
 python scripts/build.py --binary build/synowake --output dist/SynoWake.spk
 ```
 
-The builder validates a static Linux/amd64 ELF, produces an unsigned SPK and SHA256 file, and adds DSM's MD5 checksum for `package.tgz`. Paths, ordering, timestamps, line endings and POSIX permissions are fixed, producing identical archives from identical inputs. The package targets `apollolake`, requires at least DSM `7.1-42661` and is marked beta.
+The builder validates a static Linux/amd64 ELF, produces an unsigned SPK and SHA256 file, and adds DSM's MD5 checksum for `package.tgz`. Paths, ordering, timestamps, line endings and POSIX permissions are fixed, producing identical archives from identical inputs. The package targets `apollolake`, requires at least DSM `7.1-42661` and has no BETA flag.
 
 Run `go test ./...`, `node tests/scheduler.cjs`, `node tests/i18n.cjs` and `python tests/check-i18n.py`. The backend tests cover packet count/spacing, one execution record, concurrent language requests and unchanged names. The shared catalog is `internal/synowake/translations.json`: Go embeds it and the builder exports `ui/translations.js`. Build checks enforce matching template parameters and versioned language-module URLs.
 

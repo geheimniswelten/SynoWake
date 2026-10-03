@@ -1,8 +1,8 @@
-import {t, language, translateDocument} from './i18n.js?v=0.1.14-0015';
-import {DsmScheduler, getSynoToken} from './scheduler.js?v=0.1.14-0015';
+import {t, language, translateDocument} from './i18n.js?v=1.0.0-0017';
+import {DsmScheduler, getSynoToken} from './scheduler.js?v=1.0.0-0017';
 
 const $ = selector => document.querySelector(selector);
-const uiVersion = '0.1.14-0015';
+const uiVersion = '1.0.0-0017';
 translateDocument(document.body);
 const demo = new URLSearchParams(location.search).get('demo') === '1';
 const scheduler = new DsmScheduler();
@@ -18,6 +18,7 @@ let refreshing = false;
 let confirmAction;
 let scanResults = [];
 let lastDiscoveryNetwork = '';
+let webRequest = 0;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -89,12 +90,65 @@ async function refreshState() {
   connected(true, demo ? t("Lokale Vorschau · Beispieldaten") : undefined);
 }
 
-function statusBadge(status) {
+function statusBadge(status, device) {
   const names = {online: t("Online"), offline: t("Offline"), waking: t("Wird aufgeweckt"), unknown: t("Unbekannt")};
   const value = names[status] ? status : 'unknown';
-  const badge = element('span', `status ${value}`);
+  const clickable = value === 'online' && device;
+  const badge = element(clickable ? 'button' : 'span', `status ${value}`);
   badge.append(element('span', 'status-dot'), document.createTextNode(names[value]));
+  if (clickable) {
+    badge.type = 'button';
+    badge.title = t("Weboberflächen öffnen");
+    badge.setAttribute('aria-label', t("{0}: Online – Weboberflächen öffnen", device.name));
+    badge.setAttribute('aria-haspopup', 'dialog');
+    badge.setAttribute('aria-controls', 'web-dialog');
+    badge.append(element('span', 'web-arrow', '↗'));
+    badge.addEventListener('click', () => openWebPages(device));
+  }
   return badge;
+}
+
+function webPorts(value) {
+  if (!String(value || '').trim()) return [5000, 80, 8080];
+  const parts = String(value).split(',').map(port => port.trim());
+  if (parts.length > 16) throw new Error(t("Höchstens 16 Webports mit Komma getrennt eingeben."));
+  if (parts.some(port => !/^\d{1,5}$/.test(port) || Number(port) < 1 || Number(port) > 65535)) throw new Error(t("Webports müssen Zahlen von 1 bis 65535 sein, mit Komma getrennt."));
+  return [...new Set(parts.map(Number))];
+}
+
+async function loadWebPages(device) {
+  const request = ++webRequest;
+  const dialog = $('#web-dialog');
+  const refresh = $('#web-refresh'); refresh.disabled = true;
+  $('#web-pages').replaceChildren(); formError('#web-error');
+  $('#web-progress').textContent = t("Weboberflächen werden geprüft …");
+  try {
+    const result = await api('device-pages', {id: device.id});
+    if (request !== webRequest || !dialog.open) return;
+    const ports = webPorts(device.webPorts);
+    let count = 0;
+    for (const page of result.pages || []) {
+      let url;
+      try { url = new URL(page.url); } catch (_) { continue; }
+      const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
+      if (!['http:', 'https:'].includes(url.protocol) || url.hostname !== device.ip || port !== Number(page.port) || !ports.includes(port) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) continue;
+      const link = element('a', 'web-page'); link.href = url.href; link.target = '_blank';
+      link.rel = 'noopener noreferrer'; link.referrerPolicy = 'no-referrer';
+      const text = element('span', 'web-page-text');
+      text.append(element('strong', '', t("Port {0}", port)), element('span', 'monospace', url.href));
+      link.append(text, element('span', 'web-page-arrow', '↗')); $('#web-pages').append(link); count++;
+    }
+    $('#web-progress').textContent = count ? t("Erreichbare Weboberflächen · geprüft: {0}", ports.join(', ')) : t("Keine Weboberfläche gefunden. Geprüfte Ports: {0}.", ports.join(', '));
+  } catch (error) {
+    if (request === webRequest && dialog.open) { $('#web-progress').textContent = ''; formError('#web-error', error); }
+  } finally { if (request === webRequest) refresh.disabled = false; }
+}
+
+function openWebPages(device) {
+  $('#web-dialog-title').textContent = device.name;
+  $('#web-dialog').dataset.deviceId = device.id;
+  $('#web-dialog').showModal();
+  loadWebPages(device);
 }
 
 function deviceStatus(device) { return busyDevices.has(device.id) ? 'waking' : device.status || 'unknown'; }
@@ -186,7 +240,7 @@ function renderTiles() {
     checkbox.addEventListener('change', () => { checkbox.checked ? selected.add(device.id) : selected.delete(device.id); card.classList.toggle('selected', checkbox.checked); updateSelection(); });
     top.append(checkbox);
     const text = element('div', 'card-text');
-    text.append(element('h3', '', device.name), element('div', 'address', device.ip), statusBadge(deviceStatus(device)));
+    text.append(element('h3', '', device.name), element('div', 'address', device.ip), statusBadge(deviceStatus(device), device));
     const bottom = element('div', 'card-footer');
     const wake = element('button', 'wake-button'); wake.type = 'button';
     wake.append(element('span', 'power-icon', '⏻'), document.createTextNode(t("Aufwecken")));
@@ -236,7 +290,7 @@ function renderDevices() {
     });
     const favoriteCell = element('td'); favoriteCell.append(favorite); row.append(favoriteCell);
     row.append(element('td', 'device-name', device.name), element('td', 'monospace', device.ip), element('td', 'monospace', device.mac));
-    const status = element('td'); status.append(statusBadge(deviceStatus(device))); status.title = device.error || (device.probeMethod === 'tcp' ? t("Erreichbarkeit per TCP geprüft.") : ''); row.append(status);
+    const status = element('td'); status.append(statusBadge(deviceStatus(device), device)); status.title = device.error || (device.probeMethod === 'tcp' ? t("Erreichbarkeit per TCP geprüft.") : ''); row.append(status);
     const actions = element('td'); const group = element('div', 'row-actions');
     const wake = button(t("Aufwecken"), 'quiet', () => wakeDevices([device.id])); wake.disabled = deviceStatus(device) === 'waking';
     group.append(wake, button(t("Bearbeiten"), 'quiet', () => openDevice(device)), button(t("Löschen"), 'quiet', () => deleteDevice(device)));
@@ -330,7 +384,7 @@ function setField(form, name, value) { form.elements.namedItem(name).value = val
 function openDevice(device = {}) {
   const form = $('#device-form'); form.reset(); formError('#device-form-error');
   $('#device-dialog-title').textContent = device.id ? t("Gerät bearbeiten") : t("Gerät hinzufügen");
-  for (const name of ['id', 'name', 'ip', 'mac', 'broadcast']) setField(form, name, device[name]);
+  for (const name of ['id', 'name', 'ip', 'mac', 'broadcast', 'webPorts']) setField(form, name, device[name]);
   setField(form, 'port', device.port || 9);
   form.elements.namedItem('favorite').checked = device.favorite === true;
   $('#device-dialog').showModal();
@@ -341,7 +395,8 @@ function validIp(ip) { return /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && ip.split('.'
 function devicePayload(form) {
   const data = Object.fromEntries(new FormData(form));
   data.favorite = form.elements.namedItem('favorite').checked;
-  for (const field of ['name', 'ip', 'mac', 'broadcast']) data[field] = String(data[field] || '').trim();
+  for (const field of ['name', 'ip', 'mac', 'broadcast', 'webPorts']) data[field] = String(data[field] || '').trim();
+  const ports = webPorts(data.webPorts); if (data.webPorts) data.webPorts = ports.join(', ');
   data.mac = data.mac.replace(/-/g, ':').toUpperCase(); data.port = Number(data.port);
   if (!data.name || !validIp(data.ip)) throw new Error(t("Bitte einen Namen und eine gültige IPv4-Adresse eingeben."));
   if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(data.mac)) throw new Error(t("Bitte die MAC-Adresse als AA:BB:CC:DD:EE:FF eingeben."));
@@ -524,6 +579,11 @@ $('#discover-network').addEventListener('change', event => {
 $('#discover-form').elements.namedItem('cidr').addEventListener('input', clearDiscovery);
 $('#schedule-add').addEventListener('click', () => openSchedule());
 $('#device-search').addEventListener('input', renderDevices);
+$('#web-refresh').addEventListener('click', () => {
+  const device = state.devices.find(device => device.id === $('#web-dialog').dataset.deviceId);
+  if (device) loadWebPages(device);
+});
+$('#web-dialog').addEventListener('close', () => { webRequest++; $('#web-refresh').disabled = false; });
 $('#select-all').addEventListener('change', event => { selected.clear(); if (event.target.checked) favoriteDevices().forEach(device => selected.add(device.id)); renderTiles(); updateSelection(); });
 $('#wake-selected').addEventListener('click', () => wakeDevices([...selected]));
 $('#refresh-logs').addEventListener('click', async event => { const submit = event.currentTarget; submit.disabled = true; try { await refreshState(); } catch (error) { toast(error.message, true); } finally { submit.disabled = false; } });
@@ -590,7 +650,7 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.14-0015', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '1.0.0-0017', diagnostics: [], settings: {logCenterPort: 0}, active: true,
   networks: [{interface: 'Demo-LAN', ip: '192.168.1.2', cidr: '192.168.1.0/24', searchCidr: '192.168.1.0/24', broadcast: '192.168.1.255'}],
   devices: [
     {id: 'demo1', name: t("Arbeitsrechner"), ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true, status: 'offline'},
@@ -623,6 +683,12 @@ async function demoApi(action, payload = {}) {
       const device = demoState.devices.find(device => device.id === payload.id);
       if (!device) throw new Error(t("Gerät nicht gefunden."));
       device.favorite = payload.favorite; return device;
+    }
+    case 'device-pages': {
+      const device = demoState.devices.find(device => device.id === payload.id);
+      if (!device) throw new Error(t("Gerät nicht gefunden."));
+      const ports = webPorts(device.webPorts);
+      return {deviceId: device.id, ip: device.ip, ports, pages: ports.map(port => ({port, url: `${[443, 5001, 8443, 9443].includes(port) ? 'https' : 'http'}://${device.ip}:${port}/`}))};
     }
     case 'device-delete': demoState.devices = demoState.devices.filter(device => device.id !== payload.id); return {};
     case 'wake':

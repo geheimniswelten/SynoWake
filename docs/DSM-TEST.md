@@ -37,6 +37,12 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | API-Katalog meldet TaskScheduler-Version 3 | get/create/set beginnen mit Version 3 und wechseln ausschließlich bei Fehler 104 auf kompatible Alternativen. list verwendet zunächst 2 und versucht nur bei Fehler 103/104 die Alternative 3; delete verwendet 2. Erfolgreiche Versionen werden pro Methode gemerkt. |
 | DSM lehnt create-Version 4 mit Fehler 104 ab | Eine unterstützte Alternative wird verwendet. Genau eine Aufgabe wird angelegt; bei vollständiger Versionsablehnung bleibt ein Fehler mit den geprüften Versionen sichtbar. |
 | Verbindung bei Aufgabenanlage unterbrochen | Keine automatische Wiederholung mit anderer Version. Die Vorbereitung bleibt für den Aufgabenabgleich erhalten. |
+| Geräte-Webports leer lassen | Platzhalter `5000, 80, 8080`; vorhandene und neue Geräte verwenden diesen Standard. |
+| Weboberfläche erzeugt ihre Antwort erst nach mehr als 800 ms | Antwort innerhalb der erweiterten Frist wird weiterhin als Treffer angezeigt; Ports bleiben parallel, insgesamt maximal 8 Sekunden. |
+| Webports ändern und Gerät erneut bearbeiten | Eigene Portliste bleibt erhalten; ungültige Ports werden abgelehnt, Duplikate entfernt. |
+| Online in Kachel und Geräteliste anklicken | Popup prüft HTTP/HTTPS; nur antwortende Weboberflächen werden als Links angeboten. Keine Treffer und Fehler lassen keine alten Links stehen. |
+| Link im Online-Popup öffnen | Neuer Browser-Tab mit Geräte-IP und Port; keine DSM-Token in URL, kein Referrer oder Zugriff auf Ursprungsfenster. Browser benötigt LAN-/VPN-Zugriff. |
+| Popup während laufender Prüfung schließen und neu öffnen | Alte Antwort überschreibt die neue Ansicht nicht. Deutsch/Englisch und mobile Breite prüfen. |
 | Zeitplan ausführen | Testrechner startet; Anwendungsprotokoll enthält Zeit und Gerät. |
 | Uhrzeit und Wochentage bearbeiten | Bestehende DSM-Aufgabe wird geändert; keine doppelte Aufgabe. |
 | Zeitplan deaktivieren/aktivieren | DSM-Aufgabe und Oberflächenzustand stimmen überein. |

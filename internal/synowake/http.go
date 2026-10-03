@@ -283,6 +283,42 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return errors.New("Gerät nicht gefunden.")
 			})
 		}
+	case "device-pages":
+		var input struct {
+			ID string `json:"id"`
+		}
+		err = decodeBody(r, &input)
+		if err == nil {
+			var device *Device
+			for i := range s.Devices {
+				if s.Devices[i].ID == input.ID {
+					device = &s.Devices[i]
+					break
+				}
+			}
+			if device == nil {
+				err = errors.New("Gerät nicht gefunden.")
+			} else {
+				networks, _ := localNetworks()
+				var address string
+				address, err = deviceWebAddress(*device, networks)
+				if err == nil {
+					var ports []int
+					ports, err = parseWebPorts(device.WebPorts)
+					if err == nil {
+						pages := []WebPage{}
+						if a.Demo {
+							for _, port := range ports {
+								pages = append(pages, WebPage{port, webURL(address, port, webSchemes(port)[0])})
+							}
+						} else {
+							pages = probeWebPages(r.Context(), address, ports, webProbeTimeout)
+						}
+						data = map[string]any{"deviceId": device.ID, "ip": address, "ports": ports, "pages": pages}
+					}
+				}
+			}
+		}
 	case "device-delete":
 		var input struct {
 			ID string `json:"id"`

@@ -362,5 +362,19 @@
   "Aufweckversuch: {0}": "Wake attempt: {0}",
   "Gerät ist online: {0}": "Device is online: {0}",
   "Kein Erreichbarkeitsnachweis nach Aufwecken: {0}": "No reachability confirmed after waking: {0}",
-  "Zeitplan gespeichert: {0}": "Schedule saved: {0}"
+  "Zeitplan gespeichert: {0}": "Schedule saved: {0}",
+  "Webports": "Web ports",
+  "5000, 80, 8080": "5000, 80, 8080",
+  "Mit Komma trennen. Leer = 5000, 80, 8080. Beim Klick auf Online werden Weboberflächen gesucht.": "Separate with commas. Empty = 5000, 80, 8080. Click Online to find web interfaces.",
+  "WEBOBERFLÄCHEN": "WEB INTERFACES",
+  "Weboberflächen öffnen": "Open web interfaces",
+  "{0}: Online – Weboberflächen öffnen": "{0}: Online – open web interfaces",
+  "Die Links verwenden die Geräte-IP und benötigen Zugriff auf dein LAN. Sie öffnen sich in einem neuen Browser-Tab.": "Links use the device IP and require access to your LAN. They open in a new browser tab.",
+  "Erneut prüfen": "Check again",
+  "Weboberflächen werden geprüft …": "Checking web interfaces …",
+  "Port {0}": "Port {0}",
+  "Erreichbare Weboberflächen · geprüft: {0}": "Available web interfaces · checked: {0}",
+  "Keine Weboberfläche gefunden. Geprüfte Ports: {0}.": "No web interface found. Checked ports: {0}.",
+  "Höchstens 16 Webports mit Komma getrennt eingeben.": "Enter at most 16 web ports, separated with commas.",
+  "Webports müssen Zahlen von 1 bis 65535 sein, mit Komma getrennt.": "Web ports must be numbers from 1 to 65535, separated with commas."
 }

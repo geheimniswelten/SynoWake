@@ -40,6 +40,45 @@ async function run() {
   await page.locator('.device-card').first().waitFor();
   assert.equal(await page.locator('.device-card').count(), 2, 'Only favorites are dashboard tiles');
   assert.equal(await page.locator('.device-grid').evaluate(node => getComputedStyle(node).display), 'grid', 'Application stylesheet must be loaded');
+  await page.locator('#device-tiles button.status.online').click();
+  await page.locator('#web-pages a').first().waitFor();
+  assert.equal(await page.locator('#web-pages a').count(), 3, 'Legacy devices offer default web ports');
+  assert.deepEqual(await page.locator('#web-pages strong').allTextContents(), ['Port 5000', 'Port 80', 'Port 8080']);
+  const webLink = page.locator('#web-pages a').first();
+  assert.equal(await webLink.getAttribute('target'), '_blank');
+  assert.equal(await webLink.getAttribute('rel'), 'noopener noreferrer');
+  assert.equal(await webLink.getAttribute('referrerpolicy'), 'no-referrer');
+  await page.context().route('http://192.168.1.32:5000/**', route => route.fulfill({contentType: 'text/html', body: '<title>Device web page</title>'}));
+  const openedPage = page.waitForEvent('popup');
+  await webLink.click();
+  const popup = await openedPage; await popup.waitForLoadState();
+  assert.equal(await popup.evaluate(() => window.opener), null, 'Device tabs cannot access the DSM opener');
+  assert.equal(await popup.evaluate(() => document.referrer), '', 'Device tabs receive no DSM referrer');
+  assert.equal(popup.url(), 'http://192.168.1.32:5000/');
+  await popup.close();
+  await page.locator('#web-dialog .close-dialog').first().click();
+  await page.locator('.device-card').filter({hasText: 'Medien-PC'}).locator('.icon-button').click();
+  assert.equal(await page.locator('#device-form [name=webPorts]').getAttribute('placeholder'), '5000, 80, 8080');
+  assert.equal(await page.locator('#device-form [name=webPorts]').inputValue(), '');
+  await page.locator('#device-form [name=webPorts]').fill('80, 65536');
+  await page.locator('#device-form button[type=submit]').click();
+  await page.locator('#device-form-error').filter({hasText: 'Webports'}).waitFor();
+  await page.locator('#device-form [name=webPorts]').fill('443, 8443, 443');
+  await page.locator('#device-form button[type=submit]').click();
+  await page.locator('#device-dialog').waitFor({state: 'hidden'});
+  await page.locator('.device-card').filter({hasText: 'Medien-PC'}).locator('.icon-button').click();
+  assert.equal(await page.locator('#device-form [name=webPorts]').inputValue(), '443, 8443');
+  await page.locator('#device-dialog .close-dialog').first().click();
+  await page.locator('[data-tab=devices]').click();
+  await page.locator('#device-rows button.status.online').click();
+  await page.locator('#web-pages a').first().waitFor();
+  assert.deepEqual(await page.locator('#web-pages a').evaluateAll(links => links.map(link => link.href)), ['https://192.168.1.32/', 'https://192.168.1.32:8443/']);
+  await page.setViewportSize({width: 390, height: 760});
+  assert.ok(await page.locator('#web-dialog').evaluate(node => node.scrollWidth <= node.clientWidth), 'Web popup overflows on mobile');
+  await page.screenshot({path: path.join(screenshots, 'synowake-web-pages.png')});
+  await page.locator('#web-dialog .close-dialog').first().click();
+  await page.setViewportSize({width: 920, height: 660});
+  await page.locator('[data-tab=dashboard]').click();
   await page.screenshot({path: path.join(screenshots, 'synowake-dashboard.png'), fullPage: true});
   await page.locator('#select-all').check();
   await page.locator('#wake-selected').click();
@@ -158,7 +197,7 @@ async function run() {
   const deviceId = 'a'.repeat(32);
   const scheduleId = 'b'.repeat(32);
   const command = `'bin/synowake' '--run-schedule' '${scheduleId}' '--token' '${'c'.repeat(64)}'`;
-  const data = {user: 'tester', version: '0.1.14-0015', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
+  const data = {user: 'tester', version: '1.0.0-0017', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
   const networks = [
     {interface: 'eth0', ip: '192.167.178.21', cidr: '192.167.178.0/24', searchCidr: '192.167.178.0/24', broadcast: '192.167.178.255'},
     {interface: 'eth1', ip: '10.42.0.130', cidr: '10.42.0.128/25', searchCidr: '10.42.0.128/25', broadcast: '10.42.0.255'}
@@ -171,6 +210,9 @@ async function run() {
   let prepared;
   let failCommit = false;
   let failFavorite = false;
+  let webMode = 'normal';
+  let webCalls = 0;
+  let releaseWebRequest;
   await production.route('**/webman/login.cgi', route => route.fulfill({contentType: 'application/json', body: JSON.stringify({SynoToken: 'dsm-token'})}));
   await production.route('**/webapi/entry.cgi?*', route => route.fulfill({contentType: 'application/json', body: success({'SYNO.Core.TaskScheduler': {path: 'entry.cgi', minVersion: 1, maxVersion: 3, requestFormat: 'JSON'}})}));
   await production.route('**/webapi/entry.cgi/SYNO.Core.TaskScheduler', async route => {
@@ -206,6 +248,17 @@ async function run() {
     let result = {};
     if (action === 'state') result = data;
     if (action === 'status') result = statusReply;
+    if (action === 'device-pages') {
+      assert.deepEqual(payload, {id: deviceId}); webCalls++;
+      if (webMode === 'error') { await route.fulfill({status: 503, contentType: 'application/json', body: JSON.stringify({success: false, error: 'Webprüfung fehlgeschlagen'})}); return; }
+      if (webMode === 'pending') { await new Promise(resolve => { releaseWebRequest = resolve; }); result = {pages: []}; }
+      else result = {ports: [5000, 80, 8080], pages: webMode === 'empty' ? [] : [
+        {port: 5000, url: 'http://192.168.1.20:5000/'}, {port: 8080, url: 'https://192.168.1.20:8080/'},
+        {port: 80, url: 'javascript:alert(1)'}, {port: 80, url: 'http://external.example/'},
+        {port: 80, url: 'http://user:password@192.168.1.20/'}, {port: 80, url: 'http://192.168.1.20/?SynoToken=secret'},
+        {port: 80, url: 'http://192.168.1.20/admin'}, {port: 9090, url: 'http://192.168.1.20:9090/'}
+      ]};
+    }
     if (action === 'discover') {
       assert.ok(['192.167.178.0/24', '192.167.178.64/26'].includes(payload.cidr)); searches.push(payload.cidr); data.discoveryCidr = payload.cidr;
       const existing = data.devices.some(device => device.mac === '02:11:22:33:44:55');
@@ -236,7 +289,7 @@ async function run() {
   });
   await production.goto(base);
   const assetRequests = await production.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name));
-  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.14-0015`)), `Cache version missing for ${asset}`);
+  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=1.0.0-0017`)), `Cache version missing for ${asset}`);
   await production.locator('.status.offline').first().waitFor();
   statusReply = {devices: [{id: deviceId, status: 'unknown', probeMethod: 'tcp', error: 'Keine TCP-Antwort. Status unbekannt.'}]};
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -246,6 +299,34 @@ async function run() {
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await production.locator('#device-tiles .status.online').waitFor();
   assert.equal(await production.locator('.device-card').getAttribute('title'), 'Erreichbarkeit per TCP geprüft.', 'A recovered status must clear the old error');
+  await production.locator('#device-tiles button.status.online').click();
+  await production.locator('#web-pages a').first().waitFor();
+  assert.equal(await production.locator('#web-pages a').count(), 2, 'Only configured HTTP(S) links on the device IP are exposed, with no paths, credentials or tokens');
+  webMode = 'empty'; await production.locator('#web-refresh').click();
+  await production.locator('#web-progress').filter({hasText: 'Keine Weboberfläche'}).waitFor();
+  assert.equal(await production.locator('#web-pages a').count(), 0, 'A new empty result must remove old links');
+  webMode = 'error'; await production.locator('#web-refresh').click();
+  await production.locator('#web-error').filter({hasText: 'Webprüfung fehlgeschlagen'}).waitFor();
+  webMode = 'pending'; await production.locator('#web-refresh').click();
+  await production.waitForFunction(() => document.querySelector('#web-refresh').disabled);
+  await Promise.race([
+    new Promise(resolve => { const check = () => releaseWebRequest ? resolve() : setTimeout(check, 10); check(); }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Web probe fixture did not start')), 5000))
+  ]);
+  await production.locator('#web-dialog .close-dialog').first().click();
+  webMode = 'normal'; await production.locator('#device-tiles button.status.online').click();
+  await production.locator('#web-pages a').first().waitFor();
+  const oldWebReply = production.waitForResponse(response => response.url().includes('action=device-pages'));
+  releaseWebRequest(); await oldWebReply;
+  await production.waitForLoadState('networkidle');
+  assert.equal(await production.locator('#web-pages a').count(), 2, 'A late response from a closed popup cannot overwrite a new popup');
+  await production.locator('#web-dialog .close-dialog').first().click();
+  await production.locator('[data-tab=devices]').click();
+  await production.locator('#device-rows button.status.online').click();
+  await production.locator('#web-pages a').first().waitFor();
+  assert.equal(webCalls, 6, 'Web checks happen only on popup open or explicit refresh');
+  await production.locator('#web-dialog .close-dialog').first().click();
+  await production.locator('[data-tab=dashboard]').click();
   statusReply = {devices: [{id: deviceId, status: 'offline'}]};
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await production.locator('#device-tiles .status.offline').waitFor();
@@ -389,9 +470,17 @@ async function run() {
   assert.match(await english.locator('#connection-text').innerText(), /sample data/);
   assert.equal((await english.locator('.tab').first().innerText()).replace(/\s+/g, ' '), '▦ Overview');
   assert.match(await english.locator('.device-card').first().innerText(), /Work PC/);
+  await english.locator('#device-tiles button.status.online').click();
+  await english.locator('#web-pages a').first().waitFor();
+  assert.match(await english.locator('#web-progress').innerText(), /Available web interfaces/);
+  assert.match(await english.locator('#web-dialog .hint').innerText(), /access to your LAN/);
+  assert.equal(await english.locator('#web-refresh').innerText(), 'Check again');
+  await english.locator('#web-dialog .close-dialog').first().click();
   await english.locator('#dashboard-add').click();
   assert.equal(await english.locator('#device-dialog-title').innerText(), 'Add device');
   assert.equal(await english.locator('#device-form input[name=name]').getAttribute('placeholder'), 'For example, work PC');
+  assert.equal(await english.locator('#device-form [name=webPorts]').getAttribute('placeholder'), '5000, 80, 8080');
+  assert.match(await english.locator('#device-form').innerText(), /Web ports/);
   const unchangedName = 'Name enthält Steuerzeichen. {0} <PC> 100%';
   await english.locator('#device-form input[name=name]').fill(unchangedName);
   await english.locator('#device-form input[name=ip]').fill('192.168.1.99');

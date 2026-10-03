@@ -37,6 +37,12 @@ This checklist describes testing on the target NAS. A local build or browser dem
 | Catalog advertises TaskScheduler version 3 | get/create/set prefer 3 and try compatible alternatives only after 104. list starts with 2 and tries alternative 3 only after 103/104; delete uses 2; successful versions are cached per method. |
 | DSM rejects create version 4 with 104 | A supported alternative is used; exactly one task is created. Complete rejection lists checked versions. |
 | Interrupt task creation | No speculative retry using another version; preparation remains for reconciliation. |
+| Leave device web ports empty | Placeholder `5000, 80, 8080`; new and existing devices use those defaults. |
+| Web interface delays its reply by more than 800 ms | A reply within the extended deadline still appears; ports remain parallel, with an 8-second overall maximum. |
+| Change web ports and reopen device settings | Custom list persists; invalid ports reject and duplicates are removed. |
+| Click Online in a tile and device row | Popup checks HTTP/HTTPS and offers responding interfaces only. Empty results/errors remove stale links. |
+| Open a popup link | New browser tab uses device IP/port, with no DSM tokens, referrer or access to the opener. Browser requires LAN/VPN access. |
+| Close while probing, then reopen | Late results cannot overwrite the new popup. Check German/English and mobile width. |
 | Execute a schedule | Target starts; the application log records time and device. |
 | Edit time/weekdays | Existing DSM task changes without duplication. |
 | Disable/enable a schedule | DSM task and interface state agree. |
