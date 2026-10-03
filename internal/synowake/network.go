@@ -231,7 +231,7 @@ func (a *App) event(l Log, notify bool) error {
 	if notify {
 		// DSM 7 desktop notifications use package i18n keys and positional
 		// substitutions. This integration does not require a sysnotify worker.
-		_, err := runCommand("/usr/syno/bin/synodsmnotify", "-c", "SYNO.SDS.SynoWake.Application", "-p", "plain", "@administrators", "SynoWake:notification:title", "SynoWake:notification:message", l.Message)
+		_, err := runCommand("/usr/syno/bin/synodsmnotify", notificationArguments(l)...)
 		msg := ""
 		if err != nil {
 			msg = "DSM-Benachrichtigung fehlgeschlagen: " + err.Error()
@@ -265,14 +265,15 @@ func (a *App) deliverCenter(l Log) error {
 		level = "warn"
 		severity = 4
 	}
-	_, nativeErr := runCommand("/usr/syno/bin/synologset1", "sys", level, "0x11100000", "SynoWake: "+l.Message)
+	localizedMessage := logMessage(l, systemLanguage())
+	_, nativeErr := runCommand("/usr/syno/bin/synologset1", "sys", level, "0x11100000", "SynoWake: "+localizedMessage)
 	deliveryErr := nativeErr
 	if deliveryErr != nil && s.LogCenterPort > 0 {
 		c, e := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", s.LogCenterPort), 2*time.Second)
 		if e == nil {
 			c.SetWriteDeadline(time.Now().Add(2 * time.Second))
 			host, _ := os.Hostname()
-			message := strings.NewReplacer("\r", " ", "\n", " ").Replace(l.Message)
+			message := strings.NewReplacer("\r", " ", "\n", " ").Replace(localizedMessage)
 			when := l.Time
 			if when.IsZero() {
 				when = time.Now()
@@ -286,7 +287,7 @@ func (a *App) deliverCenter(l Log) error {
 	if deliveryErr != nil {
 		message = "Protokoll-Center-Übertragung ausstehend. Lokalen TCP-Empfänger einrichten oder DSM-Berechtigungen prüfen: " + deliveryErr.Error()
 		if path, e := exec.LookPath("logger"); e == nil {
-			runCommand(path, "-t", "SynoWake", l.Message)
+			runCommand(path, "-t", "SynoWake", localizedMessage)
 		}
 	}
 	return a.update(func(s *Store) error {

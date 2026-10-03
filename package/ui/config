@@ -13,7 +13,7 @@
       "grantPrivilege": "local",
       "advanceGrantPrivilege": true,
       "texts": "texts",
-      "preloadTexts": ["notification:title", "notification:message"],
+      "preloadTexts": ["notification:title", "notification:message", "notification:wake_sent", "notification:wake_failed"],
       "depend": ["SYNO.SDS.SynoWake.MainWindow"]
     },
     "SYNO.SDS.SynoWake.MainWindow": {

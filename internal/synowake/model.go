@@ -49,6 +49,8 @@ type Log struct {
 	Time          time.Time `json:"time"`
 	Level         string    `json:"level"`
 	Message       string    `json:"message"`
+	MessageKey    string    `json:"messageKey,omitempty"`
+	MessageArgs   []string  `json:"messageArgs,omitempty"`
 	Source        string    `json:"source"`
 	DeviceID      string    `json:"deviceId,omitempty"`
 	ScheduleID    string    `json:"scheduleId,omitempty"`

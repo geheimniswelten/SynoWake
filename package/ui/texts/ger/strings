@@ -1,3 +1,5 @@
 [notification]
 title="SynoWake-Aktion"
-message="{0}"
+message="Eine SynoWake-Aktion wurde protokolliert. Details stehen im Anwendungsprotokoll."
+wake_sent="3 Magic Packets an {0} gesendet."
+wake_failed="{0} konnte nicht aufgeweckt werden. Details stehen im SynoWake-Protokoll."

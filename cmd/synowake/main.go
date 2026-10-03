@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if err := synowake.Run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, synowake.ErrorText(err))
 		if errors.Is(err, synowake.ErrStopped) {
 			os.Exit(3)
 		}

@@ -3,9 +3,8 @@ const assert = require('node:assert/strict');
 
 async function run() {
   global.window = {SynoToken: 'test-token', parent: {}};
-  global.location = {search: ''};
-  const source = fs.readFileSync(require('node:path').join(__dirname, '../ui/scheduler.js'), 'utf8');
-  const {DsmScheduler, schedulerTiming} = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  global.location = {search: '?lang=de'};
+  const {DsmScheduler, schedulerTiming} = await import(require('./load-ui.cjs').uiModuleURL('scheduler.js'));
   assert.equal(schedulerTiming({time: '07:30', days: [0,1,2,3,4,5,6]}).repeat_date, 1001);
   assert.equal(schedulerTiming({time: '07:30', days: [1,2,3,4,5]}).repeat_date, 1002);
   assert.throws(() => schedulerTiming({time: '24:00', days: [1]}));

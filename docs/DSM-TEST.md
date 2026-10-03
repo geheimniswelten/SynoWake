@@ -1,5 +1,7 @@
 # Abnahme auf DS918+ / DSM 7.1
 
+Deutsch · [English](DSM-TEST.en.md)
+
 Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build oder eine Browser-Demo bestätigt keine DSM-Installation. Vor dem Test die tatsächliche DSM-Version und die NAS-Zeitzone notieren. Ein einziger Testrechner mit bekannter MAC-Adresse und funktionierendem Wake-on-LAN genügt für den ersten Durchlauf.
 
 | Prüfung | Erwartetes Ergebnis |
@@ -8,6 +10,8 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Installierte Programmrechte prüfen | `ui/api.cgi` und `bin/synowake` haben Modus `0755`; keine Setuid-/Setgid-Bits und keine zusätzlichen Ausführungsprivilegien. |
 | Paketdienst prüfen | Dienst läuft unter dem SynoWake-Paketkonto; `target/run/backend.sock` existiert und `bin/synowake status` liefert 0. |
 | Paket starten und öffnen | Eigenes DSM-Fenster zeigt Gerätekacheln, Geräteliste und Automatik. |
+| DSM-Sprache Deutsch und Englisch prüfen | Sämtliche Tabs, Dialoge, Status, Suchhinweise, Fehler und Protokolle folgen der DSM-Sprache. Vorhandene Namen bleiben unverändert. |
+| Oberfläche direkt mit deutscher/englischer Browsersprache öffnen | Ohne DSM-Sprachangabe gilt die Browsersprache; andere Sprachen fallen auf Englisch zurück. |
 | Zugriff ohne DSM-Anmeldung | `api.cgi` verweigert Daten und Wake-Aktionen. |
 | Zugriff als normaler DSM-Benutzer | Backend verweigert die Administrationsfunktionen. |
 | Gerät mit Name, IP und MAC speichern | Zeile erscheint ohne Favoriten-Häkchen; Name lässt sich ändern. |
@@ -22,7 +26,7 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Namen in der Suche prüfen | Feld heißt „Name“; beispielsweise `ACER-Frank.fritz.box` wird als `ACER-Frank` vorgeschlagen und bleibt bearbeitbar. |
 | Erfolgreich eingegebenen Suchbereich wieder öffnen | Nach DSM-Neuladen oder Paketneustart wird der gespeicherte Bereich wieder angeboten, sofern er noch innerhalb eines aktiven NAS-Netzes liegt. |
 | Tatsächliches `/25` bis `/30` prüfen | Suchvorschlag behält die Netzmaske; über das angeschlossene Netz hinausgehende Bereiche werden abgewiesen. |
-| Einzelgerät und Schnellauswahl starten | Magic Packet erreicht den Testrechner; Status wechselt von „Wird aufgeweckt“ nach „Online“, wenn ICMP oder der TCP-Ersatz eine Antwort nachweist. |
+| Einzelgerät und Schnellauswahl starten | Drei identische Magic Packets mit jeweils etwa 20 ms Pause erreichen jeden Testrechner. Genau ein Ausführungseintrag pro Gerät; keine statusabhängige Wiederholung. Status wechselt von „Wird aufgeweckt“ nach „Online“, wenn ICMP oder der TCP-Ersatz eine Antwort nachweist. |
 | ICMP-Ausführung für das Paketkonto gesperrt | Suche verwendet TCP, füllt Nachbartabellen und erklärt den Ersatzweg. Antworten auf Verbindungsaufbau oder ausdrückliche Ablehnung ergeben „Online“. Keine Antwort ergibt „Unbekannt“. |
 | ICMP nutzbar, Ziel antwortet nicht | Wie bisher „Offline“ als fehlende ICMP-Erreichbarkeit; dies beweist bei einer Firewall keinen ausgeschalteten Zustand. |
 | Zeitplan für die nächste Minute speichern | Im DSM-Aufgabenplaner existiert genau eine zugehörige SynoWake-Aufgabe. |

@@ -18,15 +18,20 @@ import (
 )
 
 func writeJSON(w http.ResponseWriter, code int, data any, err error) {
+	language := "de"
+	if localized, ok := w.(*languageWriter); ok {
+		language = localized.language
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Language", language)
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(code)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": err.Error()})
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": translateMessage(err.Error(), language)})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "data": data})
+	json.NewEncoder(w).Encode(map[string]any{"success": true, "data": localizeData(data, language)})
 }
 func authenticate(r *http.Request) (string, error) {
 	for _, path := range []string{"/usr/syno/synoman/webman/authenticate.cgi", "/usr/syno/synoman/webman/modules/authenticate.cgi"} {
@@ -115,6 +120,7 @@ func callbackFor(r *http.Request) string {
 	return scheme + "://127.0.0.1:" + port + "/webman/3rdparty/SynoWake/api.cgi"
 }
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w = forRequest(w, r)
 	action := r.URL.Query().Get("action")
 	if action == "scheduled-run" {
 		a.scheduledHTTP(w, r)
@@ -332,7 +338,11 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = decodeBody(r, &input)
 		if err == nil {
 			if a.Demo {
-				data = map[string]any{"devices": []FoundDevice{{Name: "Arbeitszimmer-PC", IP: "192.168.1.20", MAC: "00:11:22:33:44:55", Type: "LAN-Gerät", Broadcast: "192.168.1.255"}}, "warnings": []string{"Demo-Suche"}}
+				name := "Arbeitszimmer-PC"
+				if localized, ok := w.(*languageWriter); ok {
+					name = formatMessage(name, localized.language)
+				}
+				data = map[string]any{"devices": []FoundDevice{{Name: name, IP: "192.168.1.20", MAC: "00:11:22:33:44:55", Type: "LAN-Gerät", Broadcast: "192.168.1.255"}}, "warnings": []string{"Demo-Suche"}}
 			} else {
 				var found []FoundDevice
 				var warnings []string
@@ -430,7 +440,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						s.Schedules = append(plans, p)
 						s.Pending = append(s.Pending[:i], s.Pending[i+1:]...)
 						data = p.Schedule
-						addLog(s, Log{Level: "info", Source: "configuration", ScheduleID: p.ID, Message: "Zeitplan gespeichert: " + p.Name})
+						addLog(s, Log{Level: "info", Source: "configuration", ScheduleID: p.ID, Message: "Zeitplan gespeichert: " + p.Name, MessageKey: "Zeitplan gespeichert: {0}", MessageArgs: []string{p.Name}})
 						return nil
 					}
 				}
@@ -525,7 +535,7 @@ func (a *App) wakeDeviceClaim(id string, notify bool, source, scheduleID string,
 				device = d
 				s.Devices[i].LastWake = time.Now().UTC()
 				s.Devices[i].WakeState = "waking"
-				addLog(s, Log{ID: logID, Time: logTime, Level: "info", Source: source, DeviceID: id, ScheduleID: scheduleID, Message: "Aufweckversuch: " + d.Name, CenterPending: !a.Demo})
+				addLog(s, Log{ID: logID, Time: logTime, Level: "info", Source: source, DeviceID: id, ScheduleID: scheduleID, Message: "Aufweckversuch: " + d.Name, MessageKey: "Aufweckversuch: {0}", MessageArgs: []string{d.Name}, CenterPending: !a.Demo})
 				return nil
 			}
 		}
@@ -541,10 +551,12 @@ func (a *App) wakeDeviceClaim(id string, notify bool, source, scheduleID string,
 		err = wake(device)
 	}
 	level := "info"
-	message := "Magic Packet gesendet: " + device.Name
+	messageKey := "Magic Packets gesendet: {0}"
+	messageArgs := []string{device.Name}
 	if err != nil {
 		level = "error"
-		message = "Aufwecken fehlgeschlagen: " + device.Name + " – " + err.Error()
+		messageKey = "Aufwecken fehlgeschlagen: {0} – {1}"
+		messageArgs = append(messageArgs, err.Error())
 		a.update(func(s *Store) error {
 			for i, d := range s.Devices {
 				if d.ID == id {
@@ -554,7 +566,8 @@ func (a *App) wakeDeviceClaim(id string, notify bool, source, scheduleID string,
 			return nil
 		})
 	}
-	logErr := a.event(Log{ID: logID, Time: logTime, Level: level, Source: source, DeviceID: id, ScheduleID: scheduleID, Message: message}, notify)
+	message := formatMessage(messageKey, "de", messageArgs...)
+	logErr := a.event(Log{ID: logID, Time: logTime, Level: level, Source: source, DeviceID: id, ScheduleID: scheduleID, Message: message, MessageKey: messageKey, MessageArgs: messageArgs}, notify)
 	if err != nil {
 		return false, err
 	}
@@ -612,12 +625,14 @@ func (a *App) statusHTTP(w http.ResponseWriter, s Store) {
 				})
 				if changed {
 					msg := "Gerät ist online: " + d.Name
+					key := "Gerät ist online: {0}"
 					level := "info"
 					if !online {
 						msg = "Kein Erreichbarkeitsnachweis nach Aufwecken: " + d.Name
+						key = "Kein Erreichbarkeitsnachweis nach Aufwecken: {0}"
 						level = "warning"
 					}
-					a.event(Log{Level: level, Source: "status", DeviceID: d.ID, Message: msg}, false)
+					a.event(Log{Level: level, Source: "status", DeviceID: d.ID, Message: msg, MessageKey: key, MessageArgs: []string{d.Name}}, false)
 				}
 			}
 		}()

@@ -147,6 +147,18 @@ def compile_binary(go_command: str) -> Path:
     return binary
 
 
+def translation_asset() -> bytes:
+    # One source catalog is embedded in Go and exported for the browser.
+    catalog = json.loads((ROOT / "internal" / "synowake" / "translations.json").read_text(encoding="utf-8"))
+    if not catalog or not all(isinstance(key, str) and isinstance(value, str) and value for key, value in catalog.items()):
+        raise ValueError("Invalid translation catalog")
+    for key, value in catalog.items():
+        if sorted(re.findall(r'\{\d+\}|%[sw]', key)) != sorted(re.findall(r'\{\d+\}|%[sw]', value)):
+            raise ValueError(f"Translation parameters differ: {key}")
+    return ("// Generated from internal/synowake/translations.json by scripts/build.py.\n"
+            "export const english = " + json.dumps(catalog, ensure_ascii=False, sort_keys=True, indent=2) + ";\n").encode("utf-8")
+
+
 def build(binary_path: Path, output_path: Path | None) -> Path:
     binary = binary_path.read_bytes()
     check_binary(binary)
@@ -164,6 +176,8 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     for desktop_style in (ui_root / "style.css", package_root / "ui" / "style.css"):
         if desktop_style.exists():
             raise ValueError("Do not expose iframe styles as DSM ui/style.css; use scoped ui/assets/synowake.css instead")
+
+    (ui_root / "translations.js").write_bytes(translation_asset())
 
     payload: dict[str, tuple[bytes, int]] = {}
     for base, prefix in ((ui_root, "ui"), (package_root / "ui", "ui")):
@@ -190,7 +204,9 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     version = re.search(r'^version="([\d._-]+)"$', info, re.MULTILINE).group(1)
     for name, references in {
         "ui/index.html": ("assets/synowake.css", "app.js"),
-        "ui/app.js": ("./scheduler.js",),
+        "ui/app.js": ("./scheduler.js", "./i18n.js"),
+        "ui/scheduler.js": ("./i18n.js",),
+        "ui/i18n.js": ("./translations.js",),
         "ui/SynoWake.js": ("/webman/3rdparty/SynoWake/index.html",),
     }.items():
         for reference in references:

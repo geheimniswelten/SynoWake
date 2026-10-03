@@ -22,7 +22,7 @@ import (
 
 var ErrStopped = errors.New("SynoWake ist angehalten")
 
-const PackageVersion = "0.1.10-0011"
+const PackageVersion = "0.1.13-0014"
 
 func Run(args []string) error {
 	isCGI := os.Getenv("GATEWAY_INTERFACE") != ""
@@ -136,6 +136,7 @@ func invokeSchedule(id, token, callback string) error {
 			return e
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept-Language", systemLanguage())
 		req.Header.Set("X-SynoWake-Task", token)
 		response, err = client.Do(req)
 		if err != nil {

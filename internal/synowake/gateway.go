@@ -103,6 +103,7 @@ func validGatewayMetadata(m gatewayContext) bool {
 // requests to a local socket; it cannot read or write private package state.
 func newCGIProxy(socket string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = forRequest(w, r)
 		if r.Method != "GET" && r.Method != "POST" {
 			writeJSON(w, 405, nil, errors.New("HTTP-Methode nicht zulässig."))
 			return
@@ -127,7 +128,7 @@ func newCGIProxy(socket string) http.Handler {
 			return
 		}
 		request.Host = r.Host
-		for _, header := range []string{"Cookie", "Content-Type", "X-SYNO-TOKEN", "X-SynoWake-CSRF", "X-SynoWake-Task", "Origin", "Sec-Fetch-Site"} {
+		for _, header := range []string{"Cookie", "Content-Type", "Accept-Language", "X-SYNO-TOKEN", "X-SynoWake-CSRF", "X-SynoWake-Task", "Origin", "Sec-Fetch-Site"} {
 			if value := r.Header.Get(header); value != "" {
 				request.Header.Set(header, value)
 			}
@@ -142,7 +143,7 @@ func newCGIProxy(socket string) http.Handler {
 			return
 		}
 		defer response.Body.Close()
-		for _, header := range []string{"Content-Type", "Cache-Control", "X-Content-Type-Options"} {
+		for _, header := range []string{"Content-Type", "Content-Language", "Cache-Control", "X-Content-Type-Options"} {
 			if value := response.Header.Get(header); value != "" {
 				w.Header().Set(header, value)
 			}
@@ -153,6 +154,7 @@ func newCGIProxy(socket string) http.Handler {
 }
 func (a *App) backendHandler(shutdown func()) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = forRequest(w, r)
 		switch r.URL.Path {
 		case "/internal/health":
 			if r.Method != "GET" {

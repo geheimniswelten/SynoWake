@@ -32,7 +32,7 @@ async function run() {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({headless: true, ...(process.env.BROWSER_EXECUTABLE ? {executablePath: process.env.BROWSER_EXECUTABLE} : {})});
-  const page = await browser.newPage({viewport: {width: 920, height: 660}});
+  const page = await browser.newPage({locale: "de-DE", viewport: {width: 920, height: 660}});
   page.on('pageerror', error => errors.push(error.message));
   const networkWrites = [];
   page.on('request', request => { if (/api.cgi|webapi|login.cgi/.test(request.url())) networkWrites.push(request.url()); });
@@ -142,7 +142,7 @@ async function run() {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'Mobile viewport must not overflow');
   console.log('PASS: Demo dashboard, multi-wake, validation, safe name rendering, device edit/delete, discovery/import, schedules, log settings and mobile layout; no production requests.');
 
-  const production = await browser.newPage({viewport: {width: 920, height: 760}});
+  const production = await browser.newPage({locale: "de-DE", viewport: {width: 920, height: 760}});
   production.on('pageerror', error => errors.push(error.message));
   await production.addInitScript(() => {
     if (window !== window.top) return;
@@ -158,7 +158,7 @@ async function run() {
   const deviceId = 'a'.repeat(32);
   const scheduleId = 'b'.repeat(32);
   const command = `'bin/synowake' '--run-schedule' '${scheduleId}' '--token' '${'c'.repeat(64)}'`;
-  const data = {user: 'tester', version: '0.1.10-0011', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
+  const data = {user: 'tester', version: '0.1.13-0014', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
   const networks = [
     {interface: 'eth0', ip: '192.167.178.21', cidr: '192.167.178.0/24', searchCidr: '192.167.178.0/24', broadcast: '192.167.178.255'},
     {interface: 'eth1', ip: '10.42.0.130', cidr: '10.42.0.128/25', searchCidr: '10.42.0.128/25', broadcast: '10.42.0.255'}
@@ -232,7 +232,7 @@ async function run() {
   });
   await production.goto(base);
   const assetRequests = await production.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name));
-  for (const asset of ['app.js', 'scheduler.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.10-0011`)), `Cache version missing for ${asset}`);
+  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.13-0014`)), `Cache version missing for ${asset}`);
   await production.locator('.status.offline').first().waitFor();
   statusReply = {devices: [{id: deviceId, status: 'unknown', probeMethod: 'tcp', error: 'Keine TCP-Antwort. Status unbekannt.'}]};
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -374,6 +374,49 @@ async function run() {
   }, base);
   assert.deepEqual(childResult, {tasks: [], total: 0}, 'An embedded iframe must use its parent DSM session API');
   console.log('PASS: Production CGI headers/CSRF, native DSM session transport for create/get/set/list/delete and embedded iframe, foreign task guard, commit recovery and persisted pending recovery.');
+  const english = await browser.newPage({locale: 'en-US', viewport: {width: 920, height: 760}});
+  english.on('pageerror', error => errors.push(error.message));
+  await english.goto(`${base}/?demo=1`);
+  await english.locator('.device-card').first().waitFor();
+  assert.equal(await english.locator('html').getAttribute('lang'), 'en');
+  assert.match(await english.locator('#connection-text').innerText(), /sample data/);
+  assert.equal((await english.locator('.tab').first().innerText()).replace(/\s+/g, ' '), '▦ Overview');
+  assert.match(await english.locator('.device-card').first().innerText(), /Work PC/);
+  await english.locator('#dashboard-add').click();
+  assert.equal(await english.locator('#device-dialog-title').innerText(), 'Add device');
+  assert.equal(await english.locator('#device-form input[name=name]').getAttribute('placeholder'), 'For example, work PC');
+  const unchangedName = 'Name enthält Steuerzeichen. {0} <PC> 100%';
+  await english.locator('#device-form input[name=name]').fill(unchangedName);
+  await english.locator('#device-form input[name=ip]').fill('192.168.1.99');
+  await english.locator('#device-form input[name=mac]').fill('02:11:22:33:44:99');
+  await english.locator('#device-form button[type=submit]').click();
+  await english.locator('#device-dialog').waitFor({state: 'hidden'});
+  await english.locator('[data-tab=devices]').click();
+  assert.equal(await english.locator('.device-name').filter({hasText: unchangedName}).count(), 1, 'Language selection must not translate user names');
+  assert.equal(await english.locator('#device-search').getAttribute('placeholder'), 'Search name, IP or MAC');
+  await english.locator('#discover-open').click();
+  assert.match(await english.locator('#discover-dialog').innerText(), /Detected NAS network/);
+  await english.locator('#discover-form button[type=submit]').click();
+  await english.locator('.discover-row').first().waitFor();
+  assert.match(await english.locator('#discover-progress').innerText(), /devices found/);
+  assert.equal(await english.locator('.discover-row input[type=checkbox]:checked').count(), 0);
+  assert.match(await english.locator('.discover-existing').first().innerText(), /Already saved/);
+  await english.locator('#discover-dialog .close-dialog').first().click();
+  await english.locator('[data-tab=automation]').click();
+  await english.locator('#schedule-add').click();
+  assert.equal(await english.locator('#schedule-dialog-title').innerText(), 'Add wake schedule');
+  assert.equal(await english.locator('#schedule-form input[name=name]').getAttribute('placeholder'), 'Leave empty: device · days · time');
+  await english.locator('#schedule-form input[name=time]').fill('09:15');
+  await english.locator('#schedule-form button[type=submit]').click();
+  await english.locator('#schedule-dialog').waitFor({state: 'hidden'});
+  assert.equal(await english.locator('.schedule-info h3').filter({hasText: 'Work PC · Mon–Fri · 09:15'}).count(), 1);
+  await english.setViewportSize({width: 390, height: 760});
+  assert.ok(await english.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'English layout overflows on mobile');
+  await english.setViewportSize({width: 920, height: 760});
+  await english.screenshot({path: path.join(screenshots, 'english-automation.png'), fullPage: true});
+  await english.close();
+  console.log('PASS: English overview, labels, discovery, already-saved markers, optional schedule names, weekdays, mobile layout and unchanged user names.');
+
   const css = await browser.newPage();
   const cssResponse = css.waitForResponse(response => response.url().endsWith('/__results'));
   await css.goto(`${base}/tests/css-isolation.html`);

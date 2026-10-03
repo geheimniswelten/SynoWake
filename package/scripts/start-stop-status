@@ -22,7 +22,10 @@ case "${1:-}" in
             sleep 1
         done
         "$SYNOWAKE_PKGDEST/bin/synowake" stop >/dev/null 2>&1 || true
-        echo "SynoWake service failed to start; inspect $SYNOWAKE_VAR/service.log" >&2
+        case "${SYNOPKG_DSM_LANGUAGE:-enu}" in
+            ger|de|de-*) echo "SynoWake-Dienst konnte nicht gestartet werden; $SYNOWAKE_VAR/service.log prüfen" >&2 ;;
+            *) echo "SynoWake service failed to start; inspect $SYNOWAKE_VAR/service.log" >&2 ;;
+        esac
         exit 1
         ;;
     stop|status)
@@ -32,7 +35,10 @@ case "${1:-}" in
         exit 0
         ;;
     *)
-        echo "Usage: $0 {start|stop|status}" >&2
+        case "${SYNOPKG_DSM_LANGUAGE:-enu}" in
+            ger|de|de-*) echo "Aufruf: $0 {start|stop|status}" >&2 ;;
+            *) echo "Usage: $0 {start|stop|status}" >&2 ;;
+        esac
         exit 1
         ;;
 esac
