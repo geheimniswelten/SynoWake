@@ -94,7 +94,7 @@ type scheduleView struct {
 }
 
 func commandFor(s savedSchedule) string {
-	args := []string{"/var/packages/SynoWake/target/bin/synowake", "--run-schedule", s.ID, "--token", s.Secret, "--callback", s.Callback}
+	args := []string{"/var/packages/h5uSynoWake/target/bin/synowake", "--run-schedule", s.ID, "--token", s.Secret, "--callback", s.Callback}
 	for i, arg := range args {
 		args[i] = "'" + strings.ReplaceAll(arg, "'", "'\"'\"'") + "'"
 	}
@@ -117,7 +117,7 @@ func callbackFor(r *http.Request) string {
 			port = "5000"
 		}
 	}
-	return scheme + "://127.0.0.1:" + port + "/webman/3rdparty/SynoWake/api.cgi"
+	return scheme + "://127.0.0.1:" + port + "/webman/3rdparty/h5uSynoWake/api.cgi"
 }
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w = forRequest(w, r)

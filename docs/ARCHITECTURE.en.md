@@ -4,8 +4,10 @@
 
 ## Files and processes
 
+`INFO` uses `package="h5uSynoWake"` and `displayname="SynoWake"`. The DSM application is registered as `SYNO.SDS.h5uSynoWake.Application`; its visible titles remain **SynoWake**.
+
 ```text
-SynoWake.spk
+h5uSynoWake.spk
   INFO                       Package ID, apollolake, minimum DSM version
   conf/privilege             defaults.run-as: package only
   scripts/                   init/start/stop/status
@@ -25,7 +27,7 @@ SynoWake.spk
     ui/texts/                German/English notification templates
 ```
 
-DSM serves `dsmuidir="ui"` at `/webman/3rdparty/SynoWake/` and executes the CGI for each request. The persistent package service receives forwarded requests over a Unix socket and opens no TCP listening port. The CGI never opens private package state. The start script launches the service as the package account and waits for health. Stop disables execution and shuts the service down using a private-key-protected control request. Status returns 0 when active/reachable and 3 otherwise. DSM remains responsible for timing.
+DSM serves `dsmuidir="ui"` at `/webman/3rdparty/h5uSynoWake/` and executes the CGI for each request. The persistent package service receives forwarded requests over a Unix socket and opens no TCP listening port. The CGI never opens private package state. The start script launches the service as the package account and waits for health. Stop disables execution and shuts the service down using a private-key-protected control request. Status returns 0 when active/reachable and 3 otherwise. DSM remains responsible for timing.
 
 Private state resides in the package `var` directory, outside the interface. File locking and atomic replacement protect concurrent requests and lifecycle commands. Administrator state includes each schedule's command and secret so the interface can verify and recover its DSM task association. The command also appears in DSM's task script. No separate secret field is exposed in interface state; secrets are not rendered in the DOM or written to execution logs.
 
@@ -77,7 +79,7 @@ Every wake action is durably recorded before UDP transmission and updated under 
 
 The package contains no `conf/resource` and requires no `sysnotify` worker. A previously attributed installation rejection belonged to another package and did not establish a SynoWake `sysnotify` failure.
 
-Notifications invoke `synodsmnotify -c SYNO.SDS.SynoWake.Application -p plain @administrators SynoWake:notification:title <message-key> <device-name>`. The German and English catalogs contain title, generic message, `wake_sent` and `wake_failed`. DSM resolves the template for each recipient. Only the unchanged device name is supplied to `{0}` as a separate process argument. Error details stay in the application log. All four keys are preloaded so notifications work with the app closed. No shell or JSON mail string is used. Notification failures are diagnosed and logged; disabled schedules send neither packets nor notifications.
+Notifications invoke `synodsmnotify -c SYNO.SDS.h5uSynoWake.Application -p plain @administrators h5uSynoWake:notification:title <message-key> <device-name>`. The German and English catalogs contain title, generic message, `wake_sent` and `wake_failed`. DSM resolves the template for each recipient. Only the unchanged device name is supplied to `{0}` as a separate process argument. Error details stay in the application log. All four keys are preloaded so notifications work with the app closed. No shell or JSON mail string is used. Notification failures are diagnosed and logged; disabled schedules send neither packets nor notifications.
 
 ## References
 

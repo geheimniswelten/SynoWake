@@ -4,11 +4,13 @@ Deutsch · [English](DSM-TEST.en.md)
 
 Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build oder eine Browser-Demo bestätigt keine DSM-Installation. Vor dem Test die tatsächliche DSM-Version und die NAS-Zeitzone notieren. Ein einziger Testrechner mit bekannter MAC-Adresse und funktionierendem Wake-on-LAN genügt für den ersten Durchlauf.
 
+Diese Abnahme verwendet die Paketkennung `h5uSynoWake` mit dem sichtbaren Namen **SynoWake**. Upgrade-Prüfungen gelten innerhalb derselben Paketkennung. Für den Wechsel von `SynoWake` die [Installationshinweise](../README.md#installation-und-erste-verwendung) beachten; alte Daten und Aufgaben werden nicht automatisch übernommen.
+
 | Prüfung | Erwartetes Ergebnis |
 | --- | --- |
 | SPK manuell installieren | Paket-Zentrum akzeptiert die Architektur und Mindestversion; keine Root-Privilege-Meldung und keine abgelehnte Synology-Ressource. |
 | Installierte Programmrechte prüfen | `ui/api.cgi` und `bin/synowake` haben Modus `0755`; keine Setuid-/Setgid-Bits und keine zusätzlichen Ausführungsprivilegien. |
-| Paketdienst prüfen | Dienst läuft unter dem SynoWake-Paketkonto; `target/run/backend.sock` existiert und `bin/synowake status` liefert 0. |
+| Paketdienst prüfen | Dienst läuft unter dem `h5uSynoWake`-Paketkonto; `target/run/backend.sock` existiert und `bin/synowake status` liefert 0. |
 | Paket starten und öffnen | Eigenes DSM-Fenster zeigt Gerätekacheln, Geräteliste und Automatik. |
 | DSM-Sprache Deutsch und Englisch prüfen | Sämtliche Tabs, Dialoge, Status, Suchhinweise, Fehler und Protokolle folgen der DSM-Sprache. Vorhandene Namen bleiben unverändert. |
 | Oberfläche direkt mit deutscher/englischer Browsersprache öffnen | Ohne DSM-Sprachangabe gilt die Browsersprache; andere Sprachen fallen auf Englisch zurück. |
@@ -64,13 +66,13 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 
 ## Diagnose bei einem Fehler
 
-Zusätzlich Paket-Zentrum und Widgets offen halten, SynoWake stoppen/starten und das App-Fenster öffnen/schließen. Texte, Zeilenhöhen, Symbole und Formularfelder außerhalb von SynoWake müssen unverändert bleiben. Nach dem Upgrade DSM einmal vollständig neu laden, damit bereits geladene Dateien der alten Version entfernt werden; beim beschriebenen Firefox-Ablauf mit Shift+Klick auf den Aktualisieren-Knopf. Geräte, Zeitpläne, bereits gesetzte Favoriten und Ausführungsprotokolle müssen beim Upgrade erhalten bleiben. Bei einem Upgrade von vor 0.1.5 beginnen vorhandene Geräte ohne bisheriges Favoritenfeld ohne Häkchen; gewünschte Kacheln einmal in der Geräteliste markieren.
+Zusätzlich Paket-Zentrum und Widgets offen halten, SynoWake stoppen/starten und das App-Fenster öffnen/schließen. Texte, Zeilenhöhen, Symbole und Formularfelder außerhalb von SynoWake müssen unverändert bleiben. Nach dem Upgrade DSM einmal vollständig neu laden, damit bereits geladene Dateien der alten Version entfernt werden; beim beschriebenen Firefox-Ablauf mit Shift+Klick auf den Aktualisieren-Knopf. Geräte, Zeitpläne, bereits gesetzte Favoriten und Ausführungsprotokolle müssen beim Upgrade innerhalb derselben Paketkennung erhalten bleiben.
 
-Das sichtbare Fehlerbild, die DSM-Version, die Uhrzeit und die Aktion festhalten. Im SynoWake-Protokoll die Diagnose ansehen. Bei Problemen mit Installation oder Start zusätzlich `/var/log/packages/SynoWake.log` und die DSM-Paketbetriebsprotokolle prüfen. Die private Dateiablage in `/var/packages/SynoWake/var` enthält Zeitplan-Geheimnisse und gehört nicht in ungeschwärzte Supportberichte.
+Das sichtbare Fehlerbild, die DSM-Version, die Uhrzeit und die Aktion festhalten. Im SynoWake-Protokoll die Diagnose ansehen. Bei Problemen mit Installation oder Start zusätzlich `/var/log/packages/h5uSynoWake.log` und die DSM-Paketbetriebsprotokolle prüfen. Die private Dateiablage in `/var/packages/h5uSynoWake/var` enthält Zeitplan-Geheimnisse und gehört nicht in ungeschwärzte Supportberichte.
 
 Bei einer Aufgabenplaner-WebAPI-Meldung den Fehlercode und die Methode erfassen. Den betreffenden Zeitplan auch direkt im DSM-Aufgabenplaner kontrollieren. Eine fehlgeschlagene Registrierung bleibt ein Fehler; den Zeitplan nicht als funktionierend abnehmen.
 
-Wenn das native Fenster leer bleibt, zunächst die direkte UI-Adresse nach DSM-Anmeldung öffnen. Wenn die direkte Oberfläche funktioniert, liegt der Fehler bei der DSM-Fensterregistrierung. Wenn auch `api.cgi` fehlschlägt, Dienststatus, `/var/packages/SynoWake/var/service.log`, CGI-Ausführbarkeit und Authentifizierungsprüfung untersuchen. Die CGI-Weiterleitung muss den Socket erreichen, darf aber keine privaten Datendateien benötigen.
+Wenn das native Fenster leer bleibt, zunächst die direkte UI-Adresse nach DSM-Anmeldung öffnen. Wenn die direkte Oberfläche funktioniert, liegt der Fehler bei der DSM-Fensterregistrierung. Wenn auch `api.cgi` fehlschlägt, Dienststatus, `/var/packages/h5uSynoWake/var/service.log`, CGI-Ausführbarkeit und Authentifizierungsprüfung untersuchen. Die CGI-Weiterleitung muss den Socket erreichen, darf aber keine privaten Datendateien benötigen.
 
 Wenn die Wake-Aktion im eigenen Verlauf erscheint, aber nicht im Protokoll-Center, die Diagnose für `synologset1` prüfen. Im Protokoll-Center zunächst ein Archivziel wählen und einen **BSD/TCP**-Empfänger erstellen. Dessen Port in SynoWake einstellen. Für den Loopback-Sender kein SSL aktivieren. Eine neue Aktion ausführen und die Log-Center-Anzeige prüfen. Nach Beheben des Empfängers vorgemerkte Einträge erneut senden. Ein erfolgreicher TCP-Versand bestätigt noch keinen Datenbankeintrag; diese Sichtprüfung ist Teil der Abnahme.
 

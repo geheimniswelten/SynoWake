@@ -1,9 +1,9 @@
 {
   "SynoWake.js": {
-    "SYNO.SDS.SynoWake.Application": {
+    "SYNO.SDS.h5uSynoWake.Application": {
       "type": "app",
       "title": "SynoWake",
-      "appWindow": "SYNO.SDS.SynoWake.MainWindow",
+      "appWindow": "SYNO.SDS.h5uSynoWake.MainWindow",
       "desc": "Wake-on-LAN",
       "icon": "images/icon_{0}.png",
       "allowMultiInstance": false,
@@ -14,9 +14,9 @@
       "advanceGrantPrivilege": true,
       "texts": "texts",
       "preloadTexts": ["notification:title", "notification:message", "notification:wake_sent", "notification:wake_failed"],
-      "depend": ["SYNO.SDS.SynoWake.MainWindow"]
+      "depend": ["SYNO.SDS.h5uSynoWake.MainWindow"]
     },
-    "SYNO.SDS.SynoWake.MainWindow": {
+    "SYNO.SDS.h5uSynoWake.MainWindow": {
       "type": "lib",
       "title": "SynoWake",
       "icon": "images/icon_{0}.png"

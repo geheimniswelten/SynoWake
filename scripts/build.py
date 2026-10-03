@@ -201,13 +201,14 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     if re.search(r'^checksum=', info, re.MULTILINE):
         raise ValueError("INFO checksum is calculated at build time; remove it from the template")
     info += f'checksum="{hashlib.md5(compressed).hexdigest()}"\n'
+    package_name = re.search(r'^package="([^"\r\n]+)"$', info, re.MULTILINE).group(1)
     version = re.search(r'^version="([\d._-]+)"$', info, re.MULTILINE).group(1)
     for name, references in {
         "ui/index.html": ("assets/synowake.css", "app.js"),
         "ui/app.js": ("./scheduler.js", "./i18n.js"),
         "ui/scheduler.js": ("./i18n.js",),
         "ui/i18n.js": ("./translations.js",),
-        "ui/SynoWake.js": ("/webman/3rdparty/SynoWake/index.html",),
+        "ui/SynoWake.js": (f"/webman/3rdparty/{package_name}/index.html",),
     }.items():
         for reference in references:
             if f"{reference}?v={version}".encode() not in payload[name][0]:
@@ -225,7 +226,7 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
                 if directory == "conf" and path.name in {"privilege", "resource"}:
                     json.loads(content)
                 package[path.relative_to(package_root).as_posix()] = (content, 0o755 if directory == "scripts" else 0o644)
-    output_path = output_path or ROOT / "dist" / f"SynoWake-{version}-apollolake.spk"
+    output_path = output_path or ROOT / "dist" / f"{package_name}-{version}-apollolake.spk"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(tar_bytes(package))
     digest = hashlib.sha256(output_path.read_bytes()).hexdigest()

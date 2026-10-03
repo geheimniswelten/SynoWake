@@ -4,11 +4,13 @@
 
 This checklist describes testing on the target NAS. A local build or browser demo does not prove successful DSM installation. Record the DSM version/build and NAS time zone. One test computer with a known MAC and working Wake-on-LAN is sufficient for the initial run.
 
+This acceptance run uses package ID `h5uSynoWake` with the visible name **SynoWake**. Upgrade tests apply within the same package ID. For a transition from `SynoWake`, follow the [installation notes](../README.en.md#installation-and-first-use); old state and tasks are not transferred automatically.
+
 | Test | Expected result |
 | --- | --- |
 | Install the SPK manually | Package Center accepts the architecture and minimum version; no root-privilege or restricted-resource rejection. |
 | Inspect executable permissions | `ui/api.cgi` and `bin/synowake` use `0755`, without setuid/setgid or additional execution privileges. |
-| Inspect the package service | Runs as the SynoWake package account; `target/run/backend.sock` exists; `bin/synowake status` returns 0. |
+| Inspect the package service | Runs as the `h5uSynoWake` package account; `target/run/backend.sock` exists; `bin/synowake status` returns 0. |
 | Start and open the package | A DSM window displays overview tiles, devices and automation. |
 | Switch DSM between German and English | Tabs, dialogs, status, discovery notices, errors and logs follow DSM language. Existing names remain unchanged. |
 | Open the interface directly with German/English browser preferences | Without DSM language information, browser language is used; other languages fall back to English. |
@@ -64,9 +66,9 @@ This checklist describes testing on the target NAS. A local build or browser dem
 
 ## Diagnosing a failure
 
-Keep Package Center and widgets open while starting/stopping SynoWake and opening/closing its window. Text, row heights, icons and forms outside SynoWake must remain unchanged. Fully reload DSM after upgrading; for the described Firefox setup, use Shift+click on Refresh. Upgrading from before 0.1.5 leaves devices without an old favorite field unchecked; mark desired tiles once.
+Keep Package Center and widgets open while starting/stopping SynoWake and opening/closing its window. Text, row heights, icons and forms outside SynoWake must remain unchanged. Fully reload DSM after upgrading; for the described Firefox setup, use Shift+click on Refresh. Upgrades within the same package ID must preserve devices, favorites, schedules and logs.
 
-Record the visible error, DSM version, time and action. Inspect the application diagnostics; installation/startup issues also require `/var/log/packages/SynoWake.log` and DSM package logs. Private `/var/packages/SynoWake/var` data contains schedule secrets and must not be included in unredacted support reports.
+Record the visible error, DSM version, time and action. Inspect the application diagnostics; installation/startup issues also require `/var/log/packages/h5uSynoWake.log` and DSM package logs. Private `/var/packages/h5uSynoWake/var` data contains schedule secrets and must not be included in unredacted support reports.
 
 For Task Scheduler errors, record code and method and inspect the task directly in DSM. A failed registration must remain an error and must not be accepted as a working schedule.
 

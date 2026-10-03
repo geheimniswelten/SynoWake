@@ -50,7 +50,7 @@ func testRequest(t *testing.T, a *App, method, action string, body any) *http.Re
 			t.Fatal(err)
 		}
 	}
-	r := httptest.NewRequest(method, "https://nas.example:5001/webman/3rdparty/SynoWake/api.cgi?action="+action, bytes.NewReader(content))
+	r := httptest.NewRequest(method, "https://nas.example:5001/webman/3rdparty/h5uSynoWake/api.cgi?action="+action, bytes.NewReader(content))
 	r.Header.Set("Cookie", "id=authenticated-demo-session")
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("X-SynoWake-CSRF", csrfFor(testStore(t, a), "Demo-Administrator", r))
@@ -302,7 +302,7 @@ func testRunnableSchedule(t *testing.T, a *App) savedSchedule {
 	t.Helper()
 	d := testDevice(t, a)
 	now := time.Now()
-	p := savedSchedule{Schedule: Schedule{ID: randomID(), Name: "Jetzt", DeviceID: d.ID, Time: now.Format("15:04"), Days: []int{int(now.Weekday())}, Enabled: true, TaskID: 12, TaskOwner: "Demo-Administrator"}, Secret: randomHex(32), Callback: "https://127.0.0.1:5001/webman/3rdparty/SynoWake/api.cgi"}
+	p := savedSchedule{Schedule: Schedule{ID: randomID(), Name: "Jetzt", DeviceID: d.ID, Time: now.Format("15:04"), Days: []int{int(now.Weekday())}, Enabled: true, TaskID: 12, TaskOwner: "Demo-Administrator"}, Secret: randomHex(32), Callback: "https://127.0.0.1:5001/webman/3rdparty/h5uSynoWake/api.cgi"}
 	if err := a.update(func(s *Store) error { s.Schedules = append(s.Schedules, p); return nil }); err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +479,7 @@ func TestInvokeScheduleThroughLocalHTTPAndTLS(t *testing.T) {
 				server = httptest.NewServer(a)
 			}
 			defer server.Close()
-			callback := server.URL + "/webman/3rdparty/SynoWake/api.cgi"
+			callback := server.URL + "/webman/3rdparty/h5uSynoWake/api.cgi"
 			if err := invokeSchedule(p.ID, p.Secret, callback); err != nil {
 				t.Fatal(err)
 			}
@@ -510,10 +510,10 @@ func TestInvokeScheduleRedirectPreservesPOSTAndRejectsExternalTargets(t *testing
 	for _, code := range []int{301, 302, 307, 308} {
 		t.Run(fmt.Sprint(code), func(t *testing.T) {
 			source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				http.Redirect(w, r, destination.URL+"/webman/3rdparty/SynoWake/api.cgi", code)
+				http.Redirect(w, r, destination.URL+"/webman/3rdparty/h5uSynoWake/api.cgi", code)
 			}))
 			defer source.Close()
-			if err := invokeSchedule(p.ID, p.Secret, source.URL+"/webman/3rdparty/SynoWake/api.cgi"); err != nil {
+			if err := invokeSchedule(p.ID, p.Secret, source.URL+"/webman/3rdparty/h5uSynoWake/api.cgi"); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -521,11 +521,11 @@ func TestInvokeScheduleRedirectPreservesPOSTAndRejectsExternalTargets(t *testing
 	if len(testStore(t, a).Logs) != 1 {
 		t.Fatal("redirected replay executed twice")
 	}
-	for _, target := range []string{"https://example.invalid:5001/webman/3rdparty/SynoWake/api.cgi", destination.URL + "/another.cgi"} {
+	for _, target := range []string{"https://example.invalid:5001/webman/3rdparty/h5uSynoWake/api.cgi", destination.URL + "/another.cgi"} {
 		source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, target, 302)
 		}))
-		err := invokeSchedule(p.ID, p.Secret, source.URL+"/webman/3rdparty/SynoWake/api.cgi")
+		err := invokeSchedule(p.ID, p.Secret, source.URL+"/webman/3rdparty/h5uSynoWake/api.cgi")
 		source.Close()
 		if err == nil || !strings.Contains(err.Error(), "außerhalb") {
 			t.Fatalf("accepted unexpected redirect %q: %v", target, err)

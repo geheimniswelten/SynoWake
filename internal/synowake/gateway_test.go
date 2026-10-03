@@ -60,7 +60,7 @@ func testBackend(t *testing.T) (*App, string) {
 func proxyRequest(t *testing.T, proxy http.Handler, method, action string, payload any, csrf string, remote string) testResponse {
 	t.Helper()
 	body, _ := json.Marshal(payload)
-	r := httptest.NewRequest(method, "https://nas.example:5001/webman/3rdparty/SynoWake/api.cgi?action="+action, bytes.NewReader(body))
+	r := httptest.NewRequest(method, "https://nas.example:5001/webman/3rdparty/h5uSynoWake/api.cgi?action="+action, bytes.NewReader(body))
 	r.Header.Set("Cookie", "id=proxy-session")
 	r.Header.Set("X-SYNO-TOKEN", "session-token")
 	r.Header.Set("Content-Type", "application/json")
@@ -217,7 +217,7 @@ func TestAuthenticationEnvironmentIsolatedAcrossConcurrentRequests(t *testing.T)
 			if values["HTTP_COOKIE"] != cookie || values["HTTP_X_SYNO_TOKEN"] != token || values["REMOTE_ADDR"] != "192.168.1.10" || values["HTTPS"] != "on" || values["SERVER_PORT"] != "5443" {
 				t.Errorf("request environment mixed: %v", values)
 			}
-			if callbackFor(r) != "https://127.0.0.1:5443/webman/3rdparty/SynoWake/api.cgi" {
+			if callbackFor(r) != "https://127.0.0.1:5443/webman/3rdparty/h5uSynoWake/api.cgi" {
 				t.Error("callback lost original DSM port")
 			}
 		}()

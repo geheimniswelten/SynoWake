@@ -84,8 +84,8 @@ func TestNestedErrorAndDiscoveryTranslation(t *testing.T) {
 func TestNotificationUsesRecipientLanguageTemplates(t *testing.T) {
 	name := "Büro {0} <PC> 100%"
 	for _, item := range []struct{ source, key string }{
-		{"Magic Packets gesendet: {0}", "SynoWake:notification:wake_sent"},
-		{"Aufwecken fehlgeschlagen: {0} – {1}", "SynoWake:notification:wake_failed"},
+		{"Magic Packets gesendet: {0}", "h5uSynoWake:notification:wake_sent"},
+		{"Aufwecken fehlgeschlagen: {0} – {1}", "h5uSynoWake:notification:wake_failed"},
 	} {
 		args := notificationArguments(Log{MessageKey: item.source, MessageArgs: []string{name, "Gerät nicht gefunden."}})
 		if len(args) != 8 || args[6] != item.key || args[7] != name {

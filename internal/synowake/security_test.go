@@ -121,18 +121,19 @@ func TestScheduledMinuteDayBoundariesAndTolerance(t *testing.T) {
 }
 
 func TestCallbackValidationRejectsExternalDestinations(t *testing.T) {
-	valid := "https://127.0.0.1:5001/webman/3rdparty/SynoWake/api.cgi"
+	valid := "https://127.0.0.1:5001/webman/3rdparty/h5uSynoWake/api.cgi"
 	if _, err := validatedCallback(valid); err != nil {
 		t.Fatal(err)
 	}
 	for _, value := range []string{
-		"https://example.com:5001/webman/3rdparty/SynoWake/api.cgi",
-		"https://localhost:5001/webman/3rdparty/SynoWake/api.cgi",
-		"https://127.0.0.1/webman/3rdparty/SynoWake/api.cgi",
-		"https://127.0.0.1:0/webman/3rdparty/SynoWake/api.cgi",
-		"https://127.0.0.1:65536/webman/3rdparty/SynoWake/api.cgi",
-		"https://user:pass@127.0.0.1:5001/webman/3rdparty/SynoWake/api.cgi",
-		"file:///webman/3rdparty/SynoWake/api.cgi",
+		"https://example.com:5001/webman/3rdparty/h5uSynoWake/api.cgi",
+		"https://localhost:5001/webman/3rdparty/h5uSynoWake/api.cgi",
+		"https://127.0.0.1/webman/3rdparty/h5uSynoWake/api.cgi",
+		"https://127.0.0.1:0/webman/3rdparty/h5uSynoWake/api.cgi",
+		"https://127.0.0.1:65536/webman/3rdparty/h5uSynoWake/api.cgi",
+		"https://user:pass@127.0.0.1:5001/webman/3rdparty/h5uSynoWake/api.cgi",
+		"file:///webman/3rdparty/h5uSynoWake/api.cgi",
+		"https://127.0.0.1:5001/webman/3rdparty/SynoWake/api.cgi",
 		"https://127.0.0.1:5001/webman/3rdparty/Other/api.cgi",
 		valid + "?action=evil",
 		valid + "#fragment",

@@ -2,7 +2,7 @@
 
 [Deutsch](README.md) · English
 
-Wake-on-LAN application for a Synology **DS918+ running DSM 7.1**. Both the package and DSM application are named **SynoWake**.
+Wake-on-LAN application for a Synology **DS918+ running DSM 7.1**. The internal package ID is `h5uSynoWake`; the DisplayName and visible DSM application name remain **SynoWake**.
 
 The application opens in a DSM window with favorite device tiles, a searchable device list and an automation tab with execution logs. Schedules are created, edited and deleted through the existing DSM session using `SYNO.Core.TaskScheduler`. SynoWake does not modify `/etc/crontab` or `task_config.xml`.
 
@@ -39,7 +39,7 @@ python scripts/build.py
 Or package a previously built static binary:
 
 ```powershell
-python scripts/build.py --binary build/synowake --output dist/SynoWake.spk
+python scripts/build.py --binary build/synowake --output dist/h5uSynoWake.spk
 ```
 
 The builder validates a static Linux/amd64 ELF, produces an unsigned SPK and SHA256 file, and adds DSM's MD5 checksum for `package.tgz`. Paths, ordering, timestamps, line endings and POSIX permissions are fixed, producing identical archives from identical inputs. The package targets `apollolake`, requires at least DSM `7.1-42661` and has no BETA flag.
@@ -50,6 +50,8 @@ Run `go test ./...`, `node tests/scheduler.cjs`, `node tests/i18n.cjs` and `pyth
 
 ## Installation and first use
 
+**Package ID transition:** DSM treats `h5uSynoWake` as a separate package; it does not automatically upgrade an existing installation identified as `SynoWake`. State and DSM tasks are not transferred automatically. Secure any needed data first, remove old schedules through the old application, then uninstall the old package. Recreate devices and schedules in the new package. The package ID determines package identity and its directory, as described in [Synology's INFO documentation](https://help.synology.com/developer-guide/synology_package/INFO_necessary_fields.html).
+
 1. Sign in to DSM using an administrator account.
 2. Open **Package Center → Manual Install** and select the SPK. DSM displays a publisher warning for this private package; verify its source and contents before continuing.
 3. Start the package and open **SynoWake** from the main menu or Package Center.
@@ -58,7 +60,7 @@ Run `go test ./...`, `node tests/scheduler.cjs`, `node tests/i18n.cjs` and `pyth
 6. Mark devices as **Favorite** or enable **Show as a tile in the overview** when editing. Wake them using tiles or selection. Favorites do not restrict the device list or automation.
 7. In **Automation**, choose the device, time, weekdays and optional DSM notifications. Times follow the NAS time zone.
 
-If the native window does not load, open `https://NAS:DSM-Port/webman/3rdparty/SynoWake/index.html` after signing in to DSM, using your configured HTTPS port. This helps diagnose window registration. Open SynoWake through DSM for automation: a directly opened page lacks the parent DSM request layer, so direct WebAPI requests may be rejected by DSM session protection.
+If the native window does not load, open `https://NAS:DSM-Port/webman/3rdparty/h5uSynoWake/index.html` after signing in to DSM, using your configured HTTPS port. This helps diagnose window registration. Open SynoWake through DSM for automation: a directly opened page lacks the parent DSM request layer, so direct WebAPI requests may be rejected by DSM session protection.
 
 ## Status and discovery
 
@@ -76,9 +78,9 @@ The search probes hosts and reads neighbor tables. Import selected new IP/MAC re
 
 Automation appears as SynoWake tasks in DSM Task Scheduler. Creating, editing or deleting tasks requires a live DSM administrator session. SynoWake does not store passwords.
 
-Tasks invoke the included CLI, which calls the fixed local DSM CGI endpoint. The CGI forwards requests to the package service over a Unix socket. Each schedule has its own secret. Private state is under `/var/packages/SynoWake/var`; programs are under `/var/packages/SynoWake/target`. `conf/privilege` contains only `defaults.run-as: package`, programs use `0755`, and no extra execution privileges, setuid, group changes or capabilities are requested.
+Tasks invoke the included CLI, which calls the fixed local DSM CGI endpoint. The CGI forwards requests to the package service over a Unix socket. Each schedule has its own secret. Private state is under `/var/packages/h5uSynoWake/var`; programs are under `/var/packages/h5uSynoWake/target`. `conf/privilege` contains only `defaults.run-as: package`, programs use `0755`, and no extra execution privileges, setuid, group changes or capabilities are requested.
 
-Stopping the package disables execution and stops the service. Registered tasks remain but cannot wake devices while the package is stopped. Starting restores the service; upgrades preserve package data. Startup failures are logged in `var/service.log`.
+Stopping the package disables execution and stops the service. Registered tasks remain but cannot wake devices while the package is stopped. Starting restores the service; upgrades within the `h5uSynoWake` package ID preserve package data. Startup failures are logged in `var/service.log`.
 
 **Remove all SynoWake schedules in the application before uninstalling.** Lifecycle scripts have no administrator session and cannot independently delete DSM tasks. Check for remaining SynoWake-prefixed tasks in DSM Task Scheduler. Such tasks point to a removed executable after package uninstallation.
 

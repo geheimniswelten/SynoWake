@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
-SYNOWAKE_PKGDEST="${SYNOPKG_PKGDEST:-/var/packages/SynoWake/target}"
-SYNOWAKE_VAR="${SYNOPKG_PKGVAR:-/var/packages/SynoWake/var}"
+SYNOWAKE_PKGDEST="${SYNOPKG_PKGDEST:-/var/packages/h5uSynoWake/target}"
+SYNOWAKE_VAR="${SYNOPKG_PKGVAR:-/var/packages/h5uSynoWake/var}"
 export SYNOWAKE_PKGDEST SYNOWAKE_VAR
 SYNOWAKE_SOCKET="$SYNOWAKE_PKGDEST/run/backend.sock"
 export SYNOWAKE_SOCKET

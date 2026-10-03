@@ -4,8 +4,10 @@ Deutsch · [English](ARCHITECTURE.en.md)
 
 ## Dateien und Prozesse
 
+`INFO` verwendet `package="h5uSynoWake"` und `displayname="SynoWake"`. Die DSM-Anwendung ist unter `SYNO.SDS.h5uSynoWake.Application` registriert; ihre sichtbaren Titel bleiben **SynoWake**.
+
 ```text
-SynoWake.spk
+h5uSynoWake.spk
   INFO                         Paketkennung, apollolake, DSM-Mindestversion
   conf/privilege               ausschließlich defaults.run-as: package
   scripts/                     init/start/stop/status
@@ -25,7 +27,7 @@ SynoWake.spk
     ui/texts/                  deutsche und englische Benachrichtigungstexte
 ```
 
-DSM stellt die Dateien über `dsmuidir="ui"` unter `/webman/3rdparty/SynoWake/` bereit und startet den CGI-Endpunkt pro Anfrage. Ein dauerhafter Paketdienst nimmt dessen Weiterleitungen über einen Unix-Socket entgegen. Er öffnet keinen TCP-Empfangsport. Der CGI-Endpunkt greift nicht auf Paketdaten zu. Das Startskript startet den Dienst unter dem Paketkonto und wartet auf eine erfolgreiche Zustandsprüfung. `stop` setzt den Aktivzustand zurück und beendet den Dienst über eine mit einem privaten Schlüssel geschützte Steueranfrage. `status` liefert 0 für aktiv und erreichbar, andernfalls 3. DSM bleibt für die Zeitplanung zuständig.
+DSM stellt die Dateien über `dsmuidir="ui"` unter `/webman/3rdparty/h5uSynoWake/` bereit und startet den CGI-Endpunkt pro Anfrage. Ein dauerhafter Paketdienst nimmt dessen Weiterleitungen über einen Unix-Socket entgegen. Er öffnet keinen TCP-Empfangsport. Der CGI-Endpunkt greift nicht auf Paketdaten zu. Das Startskript startet den Dienst unter dem Paketkonto und wartet auf eine erfolgreiche Zustandsprüfung. `stop` setzt den Aktivzustand zurück und beendet den Dienst über eine mit einem privaten Schlüssel geschützte Steueranfrage. `status` liefert 0 für aktiv und erreichbar, andernfalls 3. DSM bleibt für die Zeitplanung zuständig.
 
 Die private Datenablage liegt im DSM-Paketverzeichnis `var`, außerhalb des UI-Verzeichnisses. Speichern verwendet eine Dateisperre und atomaren Austausch, damit parallele Dienstanfragen und Lebenszyklusbefehle denselben Datenbestand bearbeiten können. Der Zustand für angemeldete Administratoren enthält den Aufgabenbefehl mit dem jeweiligen Zeitplan-Schlüssel, damit die Anwendung ihre DSM-Aufgabe eindeutig prüfen und eine unterbrochene Registrierung wiederaufnehmen kann. Der Schlüssel erscheint auch im DSM-Aufgabenskript. Es gibt kein zusätzliches Geheimnisfeld im Oberflächenzustand; die Anwendung zeigt Schlüssel nicht im DOM an und schreibt sie nicht in das Ausführungsprotokoll.
 
@@ -85,7 +87,7 @@ Alle ausstehenden Einträge bleiben erhalten; bereits übertragene Einträge wer
 
 Das Paket enthält keine `conf/resource` und fordert keine Ressourcen-Worker an. Die aktuelle Desktop-Benachrichtigung verwendet App-Sprachtexte und benötigt dafür keine `sysnotify`-Registrierung. Der Builder prüft diese Paketkonfiguration. Die zuvor zugeordnete Installationsmeldung gehörte zu einem anderen Paket; eine Ablehnung von `sysnotify` für SynoWake wurde damit nicht nachgewiesen.
 
-Für Desktop-Meldungen verwendet der Dienst `synodsmnotify -c SYNO.SDS.SynoWake.Application -p plain @administrators SynoWake:notification:title <Nachrichtenschlüssel> <Gerätename>`. Die Sprachdateien `ui/texts/{ger,enu}/strings` enthalten Titel, eine allgemeine Meldung und die Vorlagen `wake_sent` sowie `wake_failed`. DSM löst die Vorlage in der Sprache des Empfängers auf. Nur der unveränderte Gerätename wird als eigenes Prozessargument in `{0}` eingesetzt; Fehlerdetails stehen im Anwendungsprotokoll. `texts` und alle vier `preloadTexts` sind im App-Config eingetragen, damit Meldungen auch bei geschlossenem App-Fenster möglich sind. Es wird keine Shell oder ein JSON-Mailstring verwendet. Fehler erscheinen als Diagnose und lokaler Protokolleintrag. Gestoppte Zeitpläne senden weiterhin weder Magic Packet noch Benachrichtigung.
+Für Desktop-Meldungen verwendet der Dienst `synodsmnotify -c SYNO.SDS.h5uSynoWake.Application -p plain @administrators h5uSynoWake:notification:title <Nachrichtenschlüssel> <Gerätename>`. Die Sprachdateien `ui/texts/{ger,enu}/strings` enthalten Titel, eine allgemeine Meldung und die Vorlagen `wake_sent` sowie `wake_failed`. DSM löst die Vorlage in der Sprache des Empfängers auf. Nur der unveränderte Gerätename wird als eigenes Prozessargument in `{0}` eingesetzt; Fehlerdetails stehen im Anwendungsprotokoll. `texts` und alle vier `preloadTexts` sind im App-Config eingetragen, damit Meldungen auch bei geschlossenem App-Fenster möglich sind. Es wird keine Shell oder ein JSON-Mailstring verwendet. Fehler erscheinen als Diagnose und lokaler Protokolleintrag. Gestoppte Zeitpläne senden weiterhin weder Magic Packet noch Benachrichtigung.
 
 ## Quellen
 

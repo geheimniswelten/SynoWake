@@ -36,7 +36,7 @@ func Run(args []string) error {
 	}
 	root := os.Getenv("SYNOWAKE_VAR")
 	if root == "" {
-		root = "/var/packages/SynoWake/var"
+		root = "/var/packages/h5uSynoWake/var"
 	}
 	app := &App{Root: root}
 	if len(args) == 0 {
@@ -109,7 +109,7 @@ func parseOrigin(value string) (string, error) {
 }
 func validatedCallback(value string) (*url.URL, error) {
 	u, err := url.Parse(value)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.Hostname() != "127.0.0.1" || u.Port() == "" || u.Path != "/webman/3rdparty/SynoWake/api.cgi" || u.RawQuery != "" || u.Fragment != "" {
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.Hostname() != "127.0.0.1" || u.Port() == "" || u.Path != "/webman/3rdparty/h5uSynoWake/api.cgi" || u.RawQuery != "" || u.Fragment != "" {
 		return nil, errors.New("Zeitplan-Callback muss die lokale DSM-CGI-Adresse mit Port sein.")
 	}
 	port, e := strconv.Atoi(u.Port())

@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const defaultSocket = "/var/packages/SynoWake/target/run/backend.sock"
+const defaultSocket = "/var/packages/h5uSynoWake/target/run/backend.sock"
 const gatewayHeader = "X-SynoWake-Gateway"
 
 type gatewayContextKey struct{}
@@ -331,8 +331,8 @@ func authenticationEnvironment(r *http.Request) []string {
 	values := map[string]string{
 		"GATEWAY_INTERFACE": "CGI/1.1", "HTTP_COOKIE": r.Header.Get("Cookie"), "REMOTE_ADDR": meta.ClientAddress, "SERVER_ADDR": meta.ServerAddress,
 		"SERVER_PORT": meta.ServerPort, "HTTP_HOST": r.Host, "HTTP_X_SYNO_TOKEN": r.Header.Get("X-SYNO-TOKEN"),
-		"REQUEST_METHOD": r.Method, "QUERY_STRING": r.URL.RawQuery, "SCRIPT_NAME": "/webman/3rdparty/SynoWake/api.cgi",
-		"REQUEST_URI": "/webman/3rdparty/SynoWake/api.cgi?" + r.URL.RawQuery, "SERVER_PROTOCOL": r.Proto, "HTTPS": "off",
+		"REQUEST_METHOD": r.Method, "QUERY_STRING": r.URL.RawQuery, "SCRIPT_NAME": "/webman/3rdparty/h5uSynoWake/api.cgi",
+		"REQUEST_URI": "/webman/3rdparty/h5uSynoWake/api.cgi?" + r.URL.RawQuery, "SERVER_PROTOCOL": r.Proto, "HTTPS": "off",
 	}
 	if host, _, err := net.SplitHostPort(meta.ClientAddress); err == nil {
 		values["REMOTE_ADDR"] = host

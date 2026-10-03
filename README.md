@@ -2,7 +2,7 @@
 
 Deutsch · [English](README.en.md)
 
-Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Der Paketname und der Name im DSM lauten **SynoWake**.
+Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Die interne Paketkennung lautet `h5uSynoWake`; der DisplayName und der sichtbare Name im DSM bleiben **SynoWake**.
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
@@ -47,7 +47,7 @@ python scripts/build.py
 Alternativ ein bereits gebautes statisches Programm verwenden:
 
 ```powershell
-python scripts/build.py --binary build/synowake --output dist/SynoWake.spk
+python scripts/build.py --binary build/synowake --output dist/h5uSynoWake.spk
 ```
 
 Der Builder prüft das ELF-Ziel Linux/amd64 und lehnt dynamisch gelinkte Programme ab. Er erzeugt ein SPK-Archiv, eine SHA256-Datei und den von DSM erwarteten MD5-Prüfwert für `package.tgz`. Archivpfade, Reihenfolge, Zeitstempel, Zeilenenden und POSIX-Dateirechte werden festgelegt; beim gleichen Eingabebestand entstehen identische Archive.
@@ -64,6 +64,8 @@ Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` ei
 
 ## Installation und erste Verwendung
 
+**Wechsel der Paketkennung:** DSM behandelt `h5uSynoWake` als eigenes Paket; eine vorhandene Installation mit der Kennung `SynoWake` wird nicht automatisch aktualisiert. Daten und DSM-Aufgaben werden nicht automatisch übernommen. Benötigte Daten zuerst sichern, dann die alten Zeitpläne in der bisherigen Anwendung entfernen und das alte Paket deinstallieren. Geräte und Zeitpläne anschließend im neuen Paket wieder anlegen. Die Paketkennung bestimmt die Identität und das Paketverzeichnis laut [Synology-INFO-Dokumentation](https://help.synology.com/developer-guide/synology_package/INFO_necessary_fields.html).
+
 1. Im DSM mit einem Administratorkonto anmelden.
 2. **Paket-Zentrum → Manuelle Installation** öffnen und die erzeugte `.spk` auswählen. DSM zeigt bei diesem privaten Paket eine Warnung zum Herausgeber; Inhalt und Herkunft vor dem Fortfahren prüfen.
 3. Paket starten und **SynoWake** über das Hauptmenü oder die Schaltfläche **Öffnen** aufrufen.
@@ -72,7 +74,7 @@ Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` ei
 6. In der Geräteliste die gewünschten Geräte als **Favorit** markieren oder beim Bearbeiten **Als Kachel in Übersicht anzeigen** aktivieren. Auf der Startseite eine dieser Kacheln oder die Schnellauswahl verwenden. Alle Geräte bleiben unabhängig vom Favoritenstatus in der Liste und für Automatiken verfügbar.
 7. Im Tab **Automatik** Gerät, Uhrzeit, Wochentage und optional DSM-Benachrichtigungen wählen. Die Uhrzeit folgt der Zeitzone der NAS.
 
-Wenn das DSM-Anwendungsfenster auf der konkreten Firmware nicht lädt, die Oberfläche nach DSM-Anmeldung direkt unter `https://NAS:DSM-Port/webman/3rdparty/SynoWake/index.html` öffnen. Für einen eigenen HTTPS-Port dessen Wert einsetzen. Das ist zugleich ein Diagnoseweg für die Fensterintegration.
+Wenn das DSM-Anwendungsfenster auf der konkreten Firmware nicht lädt, die Oberfläche nach DSM-Anmeldung direkt unter `https://NAS:DSM-Port/webman/3rdparty/h5uSynoWake/index.html` öffnen. Für einen eigenen HTTPS-Port dessen Wert einsetzen. Das ist zugleich ein Diagnoseweg für die Fensterintegration.
 
 Für Automatiken SynoWake aus dem DSM-Hauptmenü öffnen. Bei einer direkt geöffneten Oberfläche fehlt die übergeordnete DSM-Anfragefunktion; der direkte WebAPI-Ersatz kann deshalb je nach DSM-Sitzungsschutz abgelehnt werden.
 
@@ -96,9 +98,9 @@ Schlafende Geräte, entfernte VLANs und Hosts ohne verwertbaren Nachbartabellene
 
 Zeitpläne erscheinen zusätzlich im DSM-Aufgabenplaner als SynoWake-Aufgaben. Erstellen, Bearbeiten und Löschen benötigt eine laufende DSM-Administratorsitzung. Die Browseroberfläche verwendet die interne Aufgabenplaner-WebAPI; Passwörter werden dabei nicht in SynoWake gespeichert.
 
-Aufgaben rufen das mitgelieferte CLI auf, das eine auf den lokalen DSM-Endpunkt begrenzte Anfrage an den CGI-Endpunkt sendet. Dieser leitet sie über einen lokalen Unix-Socket an den Paketdienst weiter. Jeder Zeitplan erhält ein eigenes Geheimnis. Der Dienst und die Lebenszyklusbefehle lesen und schreiben die privaten Daten in `/var/packages/SynoWake/var` unter dem Paketkonto; ausführbare Dateien liegen unter `/var/packages/SynoWake/target`. Die Berechtigungskonfiguration enthält ausschließlich `defaults.run-as: package`. Alle Programmdateien haben Modus `0755`; zusätzliche Ausführungsprivilegien, Setuid, Gruppenänderungen und Datei-Capabilities werden nicht angefordert.
+Aufgaben rufen das mitgelieferte CLI auf, das eine auf den lokalen DSM-Endpunkt begrenzte Anfrage an den CGI-Endpunkt sendet. Dieser leitet sie über einen lokalen Unix-Socket an den Paketdienst weiter. Jeder Zeitplan erhält ein eigenes Geheimnis. Der Dienst und die Lebenszyklusbefehle lesen und schreiben die privaten Daten in `/var/packages/h5uSynoWake/var` unter dem Paketkonto; ausführbare Dateien liegen unter `/var/packages/h5uSynoWake/target`. Die Berechtigungskonfiguration enthält ausschließlich `defaults.run-as: package`. Alle Programmdateien haben Modus `0755`; zusätzliche Ausführungsprivilegien, Setuid, Gruppenänderungen und Datei-Capabilities werden nicht angefordert.
 
-**Paket stoppen** deaktiviert die Ausführung und beendet den Dienst. Bereits registrierte DSM-Aufgaben bleiben vorhanden, dürfen aber im gestoppten Zustand kein Gerät aufwecken. **Paket starten** startet den Dienst und prüft seine Erreichbarkeit. Ein Upgrade verwendet die vorhandenen Paketdaten. Startprobleme werden in `/var/packages/SynoWake/var/service.log` protokolliert.
+**Paket stoppen** deaktiviert die Ausführung und beendet den Dienst. Bereits registrierte DSM-Aufgaben bleiben vorhanden, dürfen aber im gestoppten Zustand kein Gerät aufwecken. **Paket starten** startet den Dienst und prüft seine Erreichbarkeit. Ein Upgrade innerhalb der Paketkennung `h5uSynoWake` verwendet die vorhandenen Paketdaten. Startprobleme werden in `/var/packages/h5uSynoWake/var/service.log` protokolliert.
 
 **Vor der Deinstallation alle SynoWake-Zeitpläne in der Anwendung entfernen.** Die Paket-Skripte besitzen keine DSM-Administratorsitzung und löschen Aufgaben deshalb nicht eigenmächtig. Eventuell verbliebene Aufgaben im DSM-Aufgabenplaner anhand des SynoWake-Präfixes kontrollieren und löschen. Nach dem Entfernen des Pakets enthalten sie einen nicht mehr vorhandenen Programmpfad.
 

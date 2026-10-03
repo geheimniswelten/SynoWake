@@ -185,18 +185,18 @@ func ErrorText(err error) string { return translateMessage(err.Error(), systemLa
 // DSM resolves the message template separately for each recipient's language.
 // Pass only the unchanged device name, never an already translated sentence.
 func notificationArguments(log Log) []string {
-	args := []string{"-c", "SYNO.SDS.SynoWake.Application", "-p", "plain", "@administrators", "SynoWake:notification:title"}
-	key := "SynoWake:notification:message"
+	args := []string{"-c", "SYNO.SDS.h5uSynoWake.Application", "-p", "plain", "@administrators", "h5uSynoWake:notification:title"}
+	key := "h5uSynoWake:notification:message"
 	if len(log.MessageArgs) > 0 {
 		switch log.MessageKey {
 		case "Magic Packets gesendet: {0}":
-			key = "SynoWake:notification:wake_sent"
+			key = "h5uSynoWake:notification:wake_sent"
 		case "Aufwecken fehlgeschlagen: {0} – {1}":
-			key = "SynoWake:notification:wake_failed"
+			key = "h5uSynoWake:notification:wake_failed"
 		}
 	}
 	args = append(args, key)
-	if key != "SynoWake:notification:message" {
+	if key != "h5uSynoWake:notification:message" {
 		args = append(args, log.MessageArgs[0])
 	}
 	return args
