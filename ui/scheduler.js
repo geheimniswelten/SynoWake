@@ -26,16 +26,22 @@ export function schedulerTiming(schedule) {
 }
 
 export class DsmScheduler {
-  constructor() { this.info = null; }
+  constructor() { this.info = null; this.methodVersions = new Map(); }
 
   async discover() {
     if (this.info) return this.info;
     const token = await getSynoToken();
     const query = new URLSearchParams({api: 'SYNO.API.Info', method: 'query', version: '1', query: API});
-    const response = await fetch(`/webapi/query.cgi?${query}`, {credentials: 'same-origin', cache: 'no-store', headers: {'X-SYNO-TOKEN': token}, signal: AbortSignal.timeout(15000)});
-    const data = await this.decode(response, 'API-Erkennung');
-    const info = data[API];
-    if (!info || !info.path || Number(info.maxVersion) < 4 || Number(info.minVersion || 1) > 4) throw new Error('DSM stellt keine unterstützte TaskScheduler-API (Version 4) bereit.');
+    let info;
+    for (const endpoint of ['entry.cgi', 'query.cgi']) {
+      const response = await fetch(`/webapi/${endpoint}?${query}`, {credentials: 'same-origin', cache: 'no-store', headers: {'X-SYNO-TOKEN': token}, signal: AbortSignal.timeout(15000)});
+      if (response.status === 404 && endpoint === 'entry.cgi') continue;
+      const data = await this.decode(response, 'API-Erkennung');
+      info = data[API];
+      if (info?.path) break;
+    }
+    // The catalog and individual method versions can differ across DSM builds.
+    if (!info?.path) throw new Error('DSM meldet keine TaskScheduler-API. Bitte Aufgabenplaner und DSM-Sitzung prüfen.');
     if (!/^[A-Za-z0-9_.\/-]+\.cgi$/.test(info.path) || info.path.includes('..')) throw new Error('DSM meldet einen unerwarteten API-Pfad.');
     this.info = info;
     return info;
@@ -45,27 +51,97 @@ export class DsmScheduler {
     if (!response.ok) throw new Error(`DSM-Aufgabenplaner: HTTP ${response.status} bei ${method}.`);
     let json;
     try { json = await response.json(); } catch (_) { throw new Error(`DSM-Aufgabenplaner: ungültige Antwort bei ${method}.`); }
+    return this.decodePayload(json, method);
+  }
+
+  decodePayload(json, method) {
+    if (!json || typeof json !== 'object') throw new Error(`DSM-Aufgabenplaner: ungültige Antwort bei ${method}.`);
     if (json.success !== true) {
       const code = json.error?.code ?? 'unbekannt';
-      const explanation = {104: 'Keine Berechtigung. Ein DSM-Administrator muss SynoWake öffnen.', 105: 'Keine Berechtigung für den Aufgabenplaner.', 106: 'Die DSM-Sitzung ist abgelaufen. Bitte erneut anmelden.', 107: 'Die DSM-Sitzung wurde unterbrochen. Bitte erneut anmelden.', 119: 'Die DSM-Sitzung ist ungültig. Bitte erneut anmelden.', 101: 'Diese DSM-Version unterstützt die Anfrage nicht.', 102: 'Die TaskScheduler-API ist nicht verfügbar.', 103: 'Die API-Methode wird nicht unterstützt.', 100: 'DSM hat die Parameter abgelehnt.'}[code];
-      throw new Error(`DSM-Aufgabenplaner (${method}, Fehler ${code}): ${explanation || 'Die Anfrage wurde abgelehnt. Bitte DSM-Aufgabenplaner und Benutzerrechte prüfen.'}`);
+      const explanation = {104: 'Die angeforderte API-Version unterstützt diese Methode nicht.', 105: 'DSM verweigert dieser Sitzung den Aufgabenplaner-Aufruf. Die Sitzungsanbindung oder DSM-Zugriffsrechte müssen geprüft werden.', 106: 'Die DSM-Sitzung ist abgelaufen. Bitte erneut anmelden.', 107: 'Die DSM-Sitzung wurde unterbrochen. Bitte erneut anmelden.', 119: 'Die DSM-Sitzung ist ungültig. Bitte erneut anmelden.', 101: 'Ein erforderlicher API-Parameter fehlt.', 102: 'Die TaskScheduler-API ist nicht verfügbar.', 103: 'Die API-Methode wird nicht unterstützt.', 100: 'DSM meldet einen allgemeinen Fehler.', 114: 'Ein erforderlicher Aufgabenparameter fehlt.'}[code];
+      const error = new Error(`DSM-Aufgabenplaner (${method}, Fehler ${code}): ${explanation || 'Die Anfrage wurde abgelehnt. Bitte DSM-Aufgabenplaner und Benutzerrechte prüfen.'}`);
+      error.code = Number(code); throw error;
     }
     return json.data ?? {};
   }
 
-  async call(method, parameters, version = 4) {
+  async call(method, parameters, version) {
     const info = await this.discover();
+    const minimum = Number(info.minVersion || 1);
+    const maximum = Number(info.maxVersion || 4);
+    const known = version !== undefined ? [version] : ['create', 'get', 'set'].includes(method) ? [4, 3, 2] : [4];
+    // Prefer advertised versions, then allow known newer method versions when
+    // the catalog is outdated. Cache successful versions separately per method.
+    const candidates = [...new Set([this.methodVersions.get(method), ...known.filter(value => value <= maximum), ...known.filter(value => value > maximum)])].filter(value => known.includes(value) && value >= minimum);
+    if (!candidates.length) throw new Error(`DSM meldet keine unterstützte API-Version für ${method}.`);
+    for (const [index, candidate] of candidates.entries()) {
+      try {
+        const result = await this.callVersion(method, parameters, candidate, info);
+        this.methodVersions.set(method, candidate);
+        return result;
+      } catch (error) {
+        // Error 104 explicitly rejects dispatch of this version. Only then is
+        // another version safe, including for create. Never retry an ambiguous
+        // write, HTTP failure, lost response, permission or parameter error.
+        if (error.code !== 104 || error.uncertain) throw error;
+        this.methodVersions.delete(method);
+        if (index === candidates.length - 1) {
+          error.message += ` Geprüfte Versionen: ${candidates.join(', ')}.`;
+          throw error;
+        }
+      }
+    }
+  }
+
+  async callVersion(method, parameters, version, info) {
     if (Number(info.minVersion || 1) > version) throw new Error(`DSM unterstützt die benötigte API-Version ${version} für ${method} nicht.`);
+    let nativeAPI;
+    try { if (typeof window.parent.SYNO?.API?.Request === 'function') nativeAPI = window.parent.SYNO.API; } catch (_) { /* Cross-origin parents are inaccessible. */ }
+    if (nativeAPI) return this.callNative(nativeAPI, method, parameters, version);
     const body = new URLSearchParams({api: API, method, version: String(version)});
     const jsonFormat = info.requestFormat === 'JSON';
     for (const [key, value] of Object.entries(parameters)) body.set(key, jsonFormat || typeof value === 'object' ? JSON.stringify(value) : String(value));
     const token = await getSynoToken();
+    body.set('SynoToken', token);
     const path = `/webapi/${info.path.replace(/^\//, '')}${jsonFormat ? `/${API}` : ''}`;
     let response;
     try { response = await fetch(path, {method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-SYNO-TOKEN': token}, body, signal: AbortSignal.timeout(20000)}); }
     catch (_) { const recovery = method === 'delete' ? 'Bitte Löschen erneut ausführen, damit SynoWake den aktuellen Aufgabenbestand prüft.' : 'Bitte „Vorbereitung abschließen“ verwenden, bevor du erneut speicherst.'; const error = new Error(`DSM-Aufgabenplaner: Verbindung bei ${method} unterbrochen. Der Ausgang ist unklar. ${recovery}`); error.uncertain = ['create', 'set', 'delete'].includes(method); throw error; }
     try { return await this.decode(response, method); }
-    catch (error) { if ((!response.ok || error.message.includes('ungültige Antwort')) && ['create', 'set', 'delete'].includes(method)) error.uncertain = true; throw error; }
+    catch (error) { if ((!response.ok || error.message.includes('ungültige Antwort') || [109, 110, 111, 117, 118].includes(error.code)) && ['create', 'set', 'delete'].includes(method)) error.uncertain = true; throw error; }
+  }
+
+  callNative(nativeAPI, method, parameters, version) {
+    // DSM's request layer supplies the live session token and handshake hash.
+    // Forward typed parameters; DSM performs the JSON encoding itself.
+    return new Promise((resolve, reject) => {
+      const mutation = ['create', 'set', 'delete'].includes(method);
+      const recovery = method === 'delete' ? 'Bitte Löschen erneut ausführen, damit SynoWake den aktuellen Aufgabenbestand prüft.' : 'Bitte „Vorbereitung abschließen“ verwenden, bevor du erneut speicherst.';
+      let settled = false;
+      const finish = (error, result) => {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (error) {
+          if (mutation && (!Number.isFinite(error.code) || [109, 110, 111, 117, 118].includes(error.code))) error.uncertain = true;
+          reject(error);
+        } else resolve(result);
+      };
+      const timer = setTimeout(() => finish(new Error(`DSM-Aufgabenplaner: Keine Antwort bei ${method}. Der Ausgang ist unklar. ${recovery}`)), 22000);
+      try {
+        nativeAPI.Request.call(nativeAPI, {
+          api: API, method, version, params: structuredClone(parameters), timeout: 20000,
+          callback: (success, data) => {
+            try {
+              const code = data?.code ?? data?.error?.code;
+              if (success !== true && (!data || typeof data !== 'object' || !Number.isInteger(Number(code)) || Number(code) <= 0)) throw new Error(`DSM-Aufgabenplaner: ungültige Antwort bei ${method}. Der Ausgang ist unklar. ${recovery}`);
+              finish(null, this.decodePayload(success === true ? {success: true, data} : {success: false, error: data.error || data}, method));
+            } catch (error) { finish(error); }
+          }
+        });
+      } catch (_) {
+        finish(new Error(`DSM-Aufgabenplaner: DSM-Anfrage bei ${method} unterbrochen. Der Ausgang ist unklar. ${recovery}`));
+      }
+    });
   }
 
   async getOwnedTask(schedule) {

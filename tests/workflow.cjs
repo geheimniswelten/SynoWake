@@ -118,6 +118,23 @@ async function run() {
   await created.locator('button', {hasText: 'Löschen'}).click();
   await page.locator('#confirm-submit').click();
   await page.locator('#confirm-dialog').waitFor({state: 'hidden'});
+  await page.locator('#schedule-add').click();
+  const automaticDevice = await page.locator('#schedule-form [name=deviceId] option:checked').textContent();
+  await page.locator('#days-all').click();
+  await page.locator('#schedule-form [name=time]').fill('06:45');
+  await page.locator('#schedule-form button[type=submit]').click();
+  await page.locator('#schedule-dialog').waitFor({state: 'hidden'});
+  const automatic = page.locator('.schedule-card').filter({hasText: `${automaticDevice} · Täglich · 06:45`});
+  await automatic.locator('button', {hasText: 'Bearbeiten'}).click();
+  await page.locator('#schedule-form [name=name]').fill('');
+  for (const input of await page.locator('#weekday-options input').all()) await input.uncheck();
+  for (const day of [0, 3, 1]) await page.locator(`#weekday-options input[value="${day}"]`).check();
+  await page.locator('#schedule-form button[type=submit]').click();
+  await page.locator('#schedule-dialog').waitFor({state: 'hidden'});
+  const specificDays = page.locator('.schedule-card').filter({hasText: `${automaticDevice} · Mo, Mi, So · 06:45`});
+  await specificDays.locator('button', {hasText: 'Löschen'}).click();
+  await page.locator('#confirm-submit').click();
+  await page.locator('#confirm-dialog').waitFor({state: 'hidden'});
   await page.setViewportSize({width: 390, height: 844});
   await page.locator('[data-tab=dashboard]').click();
   await page.screenshot({path: path.join(screenshots, 'synowake-mobile.png'), fullPage: true});
@@ -127,10 +144,21 @@ async function run() {
 
   const production = await browser.newPage({viewport: {width: 920, height: 760}});
   production.on('pageerror', error => errors.push(error.message));
+  await production.addInitScript(() => {
+    if (window !== window.top) return;
+    window.SYNO = {API: {Request(config) {
+      const body = new URLSearchParams({api: config.api, method: config.method, version: String(config.version), SynoToken: 'dsm-token'});
+      for (const [key, value] of Object.entries(config.params)) body.set(key, JSON.stringify(value));
+      fetch('/webapi/entry.cgi/SYNO.Core.TaskScheduler', {method: 'POST', body,
+        headers: {'X-SYNO-TOKEN': 'dsm-token', 'X-SYNO-HASH': 'test-native-session-hash'}})
+        .then(response => response.json()).then(json => config.callback(json.success, json.success ? json.data : json.error))
+        .catch(() => config.callback(false, {status: 0}));
+    }}};
+  });
   const deviceId = 'a'.repeat(32);
   const scheduleId = 'b'.repeat(32);
   const command = `'bin/synowake' '--run-schedule' '${scheduleId}' '--token' '${'c'.repeat(64)}'`;
-  const data = {user: 'tester', version: '0.1.6-0007', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
+  const data = {user: 'tester', version: '0.1.10-0011', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
   const networks = [
     {interface: 'eth0', ip: '192.167.178.21', cidr: '192.167.178.0/24', searchCidr: '192.167.178.0/24', broadcast: '192.167.178.255'},
     {interface: 'eth1', ip: '10.42.0.130', cidr: '10.42.0.128/25', searchCidr: '10.42.0.128/25', broadcast: '10.42.0.255'}
@@ -144,21 +172,27 @@ async function run() {
   let failCommit = false;
   let failFavorite = false;
   await production.route('**/webman/login.cgi', route => route.fulfill({contentType: 'application/json', body: JSON.stringify({SynoToken: 'dsm-token'})}));
-  await production.route('**/webapi/query.cgi?*', route => route.fulfill({contentType: 'application/json', body: success({'SYNO.Core.TaskScheduler': {path: 'entry.cgi', minVersion: 1, maxVersion: 4, requestFormat: 'JSON'}})}));
+  await production.route('**/webapi/entry.cgi?*', route => route.fulfill({contentType: 'application/json', body: success({'SYNO.Core.TaskScheduler': {path: 'entry.cgi', minVersion: 1, maxVersion: 3, requestFormat: 'JSON'}})}));
   await production.route('**/webapi/entry.cgi/SYNO.Core.TaskScheduler', async route => {
     const body = new URLSearchParams(route.request().postData());
     const method = body.get('method');
-    const parsed = Object.fromEntries([...body].map(([key, value]) => [key, ['api', 'method', 'version'].includes(key) ? value : JSON.parse(value)]));
+    const parsed = Object.fromEntries([...body].filter(([key]) => key !== 'SynoToken').map(([key, value]) => [key, ['api', 'method', 'version'].includes(key) ? value : JSON.parse(value)]));
     assert.equal(route.request().headers()['x-syno-token'], 'dsm-token');
+    assert.equal(route.request().headers()['x-syno-hash'], 'test-native-session-hash', 'All scheduler operations must use the DSM session transport');
+    assert.equal(body.get('SynoToken'), 'dsm-token');
     calls.push(parsed);
     let result = {};
-    if (method === 'create') { assert.equal(parsed.owner, 'tester'); assert.equal(parsed.type, 'script'); assert.equal(parsed.extra.script, command); assert.equal(parsed.schedule.repeat_date, 1002); tasks.set(42, {...parsed, id: 42}); result = {id: 42}; }
+    if (['create', 'get', 'set'].includes(method) && parsed.version !== '2') {
+      await route.fulfill({contentType: 'application/json', body: JSON.stringify({success: false, error: {code: 104}})}); return;
+    }
+    if (method === 'create') { assert.equal(parsed.version, '2'); assert.equal(parsed.owner, 'tester'); assert.equal(parsed.type, 'script'); assert.equal(parsed.extra.script, command); assert.equal(parsed.schedule.repeat_date, 1002); assert.equal(tasks.size, 0); tasks.set(42, {...parsed, id: 42}); result = {id: 42}; }
     if (method === 'get') result = tasks.get(Number(parsed.id));
     if (method === 'set') tasks.set(Number(parsed.id), {...parsed, type: 'script'});
     if (method === 'list') result = {tasks: [...tasks.values()].map(task => ({id: task.id, name: task.name, owner: task.owner, real_owner: task.real_owner})), total: tasks.size};
     if (method === 'delete') { assert.equal(parsed.version, '2'); tasks.delete(parsed.tasks[0].id); }
     await route.fulfill({contentType: 'application/json', body: success(result)});
   });
+  let statusReply = {devices: [{id: deviceId, status: 'offline'}]};
   await production.route('**/api.cgi?action=*', async route => {
     const request = route.request();
     assert.equal(request.headers()['x-syno-token'], 'dsm-token');
@@ -167,7 +201,7 @@ async function run() {
     if (request.method() === 'POST') assert.equal(request.headers()['x-synowake-csrf'], 'csrf-test');
     let result = {};
     if (action === 'state') result = data;
-    if (action === 'status') result = {devices: [{id: deviceId, status: 'offline'}]};
+    if (action === 'status') result = statusReply;
     if (action === 'discover') {
       assert.ok(['192.167.178.0/24', '192.167.178.64/26'].includes(payload.cidr)); searches.push(payload.cidr); data.discoveryCidr = payload.cidr;
       const existing = data.devices.some(device => device.mac === '02:11:22:33:44:55');
@@ -198,8 +232,19 @@ async function run() {
   });
   await production.goto(base);
   const assetRequests = await production.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name));
-  for (const asset of ['app.js', 'scheduler.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.6-0007`)), `Cache version missing for ${asset}`);
+  for (const asset of ['app.js', 'scheduler.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.10-0011`)), `Cache version missing for ${asset}`);
   await production.locator('.status.offline').first().waitFor();
+  statusReply = {devices: [{id: deviceId, status: 'unknown', probeMethod: 'tcp', error: 'Keine TCP-Antwort. Status unbekannt.'}]};
+  await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await production.locator('#device-tiles .status.unknown').waitFor();
+  assert.match(await production.locator('.device-card').getAttribute('title'), /Keine TCP-Antwort/);
+  statusReply = {devices: [{id: deviceId, status: 'online', probeMethod: 'tcp'}]};
+  await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await production.locator('#device-tiles .status.online').waitFor();
+  assert.equal(await production.locator('.device-card').getAttribute('title'), 'Erreichbarkeit per TCP geprüft.', 'A recovered status must clear the old error');
+  statusReply = {devices: [{id: deviceId, status: 'offline'}]};
+  await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await production.locator('#device-tiles .status.offline').waitFor();
   await production.locator('[data-tab=devices]').click();
   await production.locator('#discover-open').click();
   await production.locator('#discover-dialog').waitFor({state: 'visible'});
@@ -274,21 +319,24 @@ async function run() {
   console.log('PASS: NAS network autofill without device heuristic, /25 selection, connected nonprivate discovery/import with broadcast, stale-result clearing and empty-inventory fallback; mobile layout.');
   await production.locator('[data-tab=automation]').click();
   await production.locator('#schedule-add').click();
-  await production.locator('#schedule-form [name=name]').fill('API-Test');
+  await production.locator('#schedule-form [name=name]').fill('   ');
   await production.locator('#schedule-form button[type=submit]').click();
   await production.locator('#schedule-dialog').waitFor({state: 'hidden'});
   assert.equal(tasks.size, 1);
   assert.equal(data.schedules[0].taskId, 42);
+  assert.equal(data.schedules[0].name, 'Arbeitsrechner · Mo–Fr · 08:00');
+  assert.equal(tasks.get(42).name, 'SynoWake: Arbeitsrechner · Mo–Fr · 08:00', 'Blank names must reach DSM with device, selected days and time');
+  assert.deepEqual(calls.filter(call => call.method === 'create').map(call => call.version), ['3', '2'], 'Unsupported create version is rejected before exactly one compatible creation');
   await production.locator('.schedule-card .toggle input').uncheck();
   await production.locator('.schedule-card').filter({hasText: 'Pausiert'}).waitFor();
   assert.equal(tasks.get(42).enable, false, 'Enable toggle must update DSM task');
-  assert.equal(calls.filter(call => call.method === 'set').length, 1);
+  assert.deepEqual(calls.filter(call => call.method === 'set').map(call => call.version), ['3', '2']);
   tasks.get(42).extra.script = 'foreign command';
   await production.locator('.schedule-card button', {hasText: 'Bearbeiten'}).click();
   await production.locator('#schedule-form [name=time]').fill('08:30');
   await production.locator('#schedule-form button[type=submit]').click();
   await production.locator('#schedule-form-error').filter({hasText: 'stimmt nicht'}).waitFor();
-  assert.equal(calls.filter(call => call.method === 'set').length, 1, 'Foreign script must never be modified');
+  assert.deepEqual(calls.filter(call => call.method === 'set').map(call => call.version), ['3', '2'], 'Foreign script must never trigger another modification');
   tasks.get(42).extra.script = command;
   failCommit = true;
   await production.locator('#schedule-form button[type=submit]').click();
@@ -312,7 +360,20 @@ async function run() {
   assert.equal(tasks.size, 0);
   assert.equal(data.schedules.length, 0);
   assert.deepEqual(errors, []);
-  console.log('PASS: Production CGI headers/CSRF, TaskScheduler JSON discovery/create/get/set/delete, sanitized toggle payload, foreign task guard, commit recovery and persisted pending recovery.');
+  await production.route('**/native-session-child', route => route.fulfill({contentType: 'text/html', body: '<!doctype html><title>Session child</title>'}));
+  const childNavigation = production.waitForEvent('framenavigated', {predicate: frame => frame.url().endsWith('/native-session-child')});
+  await production.evaluate(() => {
+    const iframe = document.createElement('iframe'); iframe.src = '/native-session-child'; iframe.hidden = true; document.body.append(iframe);
+  });
+  await childNavigation;
+  const child = production.frames().find(frame => frame.url().endsWith('/native-session-child'));
+  const childResult = await child.evaluate(async baseURL => {
+    if (window.SYNO?.API?.Request) throw new Error('The child must obtain the session API from its DSM parent');
+    const {DsmScheduler} = await import(`${baseURL}/scheduler.js`);
+    return new DsmScheduler().call('list', {offset: 0, limit: 100}, 3);
+  }, base);
+  assert.deepEqual(childResult, {tasks: [], total: 0}, 'An embedded iframe must use its parent DSM session API');
+  console.log('PASS: Production CGI headers/CSRF, native DSM session transport for create/get/set/list/delete and embedded iframe, foreign task guard, commit recovery and persisted pending recovery.');
   const css = await browser.newPage();
   const cssResponse = css.waitForResponse(response => response.url().endsWith('/__results'));
   await css.goto(`${base}/tests/css-isolation.html`);

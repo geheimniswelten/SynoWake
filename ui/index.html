@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>SynoWake</title>
-  <link rel="stylesheet" href="assets/synowake.css?v=0.1.6-0007">
+  <link rel="stylesheet" href="assets/synowake.css?v=0.1.10-0011">
 </head>
 <body id="synowake-app">
   <div class="app-shell">
@@ -67,7 +67,7 @@
   </dialog>
   <dialog id="schedule-dialog"><form id="schedule-form">
     <div class="dialog-heading"><div><span class="eyebrow">AUTOMATIK</span><h2 id="schedule-dialog-title">Weckzeit anlegen</h2></div><button type="button" class="icon-button close-dialog" aria-label="Schließen">×</button></div>
-    <input type="hidden" name="id"><label class="field">Name<input name="name" required maxlength="80" placeholder="Zum Beispiel Arbeitsbeginn"></label>
+    <input type="hidden" name="id"><label class="field">Name<input name="name" maxlength="80" placeholder="Leer lassen: Gerät · Tage · Uhrzeit"></label>
     <div class="field-row"><label class="field">Gerät<select name="deviceId" required></select></label><label class="field small">Uhrzeit<input name="time" type="time" value="08:00" required></label></div>
     <div class="field"><span>An diesen Tagen</span><div class="weekday-options" id="weekday-options"></div><div class="preset-days"><button type="button" class="button quiet compact" id="days-all">Täglich</button><button type="button" class="button quiet compact" id="days-work">Mo–Fr</button></div></div>
     <label class="check-label form-check"><input type="checkbox" name="enabled" checked> Automatik aktiv</label><label class="check-label form-check"><input type="checkbox" name="notify"> Ausführung in DSM-Benachrichtigungen anzeigen</label>
@@ -75,6 +75,6 @@
     <p id="schedule-form-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary close-dialog">Abbrechen</button><button type="submit" class="button primary">Automatik speichern</button></div>
   </form></dialog>
   <dialog id="confirm-dialog"><form id="confirm-form"><div class="dialog-heading"><h2 id="confirm-title">Löschen bestätigen</h2></div><p id="confirm-copy" class="dialog-copy"></p><p id="confirm-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary close-dialog">Abbrechen</button><button type="submit" class="button danger" id="confirm-submit">Löschen</button></div></form></dialog>
-  <script type="module" src="app.js?v=0.1.6-0007"></script>
+  <script type="module" src="app.js?v=0.1.10-0011"></script>
 </body>
 </html>

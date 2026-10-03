@@ -28,15 +28,31 @@ func ping(ip string) (bool, error) {
 	if err != nil {
 		return false, errors.New("ping ist nicht verfügbar")
 	}
-	_, err = runCommand(path, "-n", "-c", "1", "-W", "1", ip)
+	output, err := runCommand(path, "-n", "-c", "1", "-W", "1", ip)
 	if err == nil {
 		return true, nil
 	}
 	var exit *exec.ExitError
-	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+	if errors.As(err, &exit) {
+		return pingExitResult(output, exit.ExitCode())
+	}
+	return false, errors.New("ICMP-Prüfung konnte nicht ausgeführt werden.")
+}
+
+func pingExitResult(output string, code int) (bool, error) {
+	if code == 0 {
+		return true, nil
+	}
+	lower := strings.ToLower(output)
+	for _, problem := range []string{"not permitted", "permission denied", "not allowed", "invalid option", "unrecognized option", "usage:"} {
+		if strings.Contains(lower, problem) {
+			return false, errors.New("ICMP-Ping ist für das Paketkonto nicht verfügbar.")
+		}
+	}
+	if code == 1 {
 		return false, nil
 	}
-	return false, errors.New("ICMP-Statusprüfung nicht verfügbar (ping-Berechtigung prüfen).")
+	return false, errors.New("ICMP-Prüfung konnte nicht ausgeführt werden.")
 }
 func wake(d Device) error {
 	packet, err := magicPacket(d.MAC)
@@ -90,18 +106,18 @@ func discover(cidr string) ([]FoundDevice, []string, error) {
 	}
 	jobs := make(chan string)
 	var wg sync.WaitGroup
-	var errMu sync.Mutex
-	var pingErr error
+	var probeMu sync.Mutex
+	var usedTCP bool
 	for i := 0; i < 24; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for ip := range jobs {
-				_, err := ping(ip)
-				if err != nil {
-					errMu.Lock()
-					pingErr = err
-					errMu.Unlock()
+				_, method, _ := probeHost(ip)
+				if method == "tcp" {
+					probeMu.Lock()
+					usedTCP = true
+					probeMu.Unlock()
 				}
 			}
 		}()
@@ -154,8 +170,8 @@ func discover(cidr string) ([]FoundDevice, []string, error) {
 		}
 	}
 	warnings := []string{"Die Suche findet IPv4-Nachbarn im lokalen LAN. Schlafende Geräte, VLANs und Geräte ohne ARP-Eintrag können fehlen. Namen stammen aus DNS und bleiben bearbeitbar."}
-	if pingErr != nil {
-		warnings = append(warnings, pingErr.Error())
+	if usedTCP {
+		warnings = append(warnings, "ICMP ist für das Paketkonto nicht verfügbar. SynoWake verwendet eine TCP-Erreichbarkeitsprüfung. Vollständig gefilterte Geräte können fehlen.")
 	}
 	results := make([]FoundDevice, 0, len(neighbors))
 	sem := make(chan struct{}, 16)
@@ -214,7 +230,7 @@ func (a *App) event(l Log, notify bool) error {
 	}
 	if notify {
 		// DSM 7 desktop notifications use package i18n keys and positional
-		// substitutions. They do not require the reserved sysnotify worker.
+		// substitutions. This integration does not require a sysnotify worker.
 		_, err := runCommand("/usr/syno/bin/synodsmnotify", "-c", "SYNO.SDS.SynoWake.Application", "-p", "plain", "@administrators", "SynoWake:notification:title", "SynoWake:notification:message", l.Message)
 		msg := ""
 		if err != nil {

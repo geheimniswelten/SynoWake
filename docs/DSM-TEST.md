@@ -22,9 +22,17 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Namen in der Suche prüfen | Feld heißt „Name“; beispielsweise `ACER-Frank.fritz.box` wird als `ACER-Frank` vorgeschlagen und bleibt bearbeitbar. |
 | Erfolgreich eingegebenen Suchbereich wieder öffnen | Nach DSM-Neuladen oder Paketneustart wird der gespeicherte Bereich wieder angeboten, sofern er noch innerhalb eines aktiven NAS-Netzes liegt. |
 | Tatsächliches `/25` bis `/30` prüfen | Suchvorschlag behält die Netzmaske; über das angeschlossene Netz hinausgehende Bereiche werden abgewiesen. |
-| Einzelgerät und Schnellauswahl starten | Magic Packet erreicht den Testrechner; Status wechselt von „Wird aufgeweckt“ nach „Online“, wenn ICMP beantwortet wird. |
-| Onlineprüfung mit gesperrtem ICMP | Gerät wird nicht als nachweislich online angezeigt; Einschränkung ist nachvollziehbar. |
+| Einzelgerät und Schnellauswahl starten | Magic Packet erreicht den Testrechner; Status wechselt von „Wird aufgeweckt“ nach „Online“, wenn ICMP oder der TCP-Ersatz eine Antwort nachweist. |
+| ICMP-Ausführung für das Paketkonto gesperrt | Suche verwendet TCP, füllt Nachbartabellen und erklärt den Ersatzweg. Antworten auf Verbindungsaufbau oder ausdrückliche Ablehnung ergeben „Online“. Keine Antwort ergibt „Unbekannt“. |
+| ICMP nutzbar, Ziel antwortet nicht | Wie bisher „Offline“ als fehlende ICMP-Erreichbarkeit; dies beweist bei einer Firewall keinen ausgeschalteten Zustand. |
 | Zeitplan für die nächste Minute speichern | Im DSM-Aufgabenplaner existiert genau eine zugehörige SynoWake-Aufgabe. |
+| Weckzeit ohne Namen oder nur mit Leerzeichen speichern | Name enthält Gerät, ausgewählte Tage und Uhrzeit; für alle Tage „Täglich“, für Mo–Fr diese Kurzform, sonst einzelne Tage. Derselbe Name steht mit SynoWake-Präfix im DSM-Aufgabenplaner. |
+| Weckzeit mit eigenem Namen speichern | Der eingetragene Name wird übernommen. |
+| SynoWake über DSM-Hauptmenü öffnen; Konto kann direkt im DSM Aufgaben anlegen | Aufgabenanlage verwendet die native DSM-Sitzung mit aktuellem Sitzungsschutz und wird nicht mit Fehler 105 abgelehnt. |
+| Native Aufgabenanfrage verliert ihre Antwort | Kein direkter Ersatzaufruf und keine doppelte Anlage. Die Vorbereitung bleibt für den Aufgabenabgleich erhalten; eine verspätete Antwort registriert sie nicht nachträglich lokal. |
+| API-Katalog meldet TaskScheduler-Version 3 | get/create/set beginnen mit Version 3 und wechseln ausschließlich bei Fehler 104 auf kompatible Alternativen. list verwendet 3, delete 2. Erfolgreiche Versionen werden pro Methode gemerkt. |
+| DSM lehnt create-Version 4 mit Fehler 104 ab | Eine unterstützte Alternative wird verwendet. Genau eine Aufgabe wird angelegt; bei vollständiger Versionsablehnung bleibt ein Fehler mit den geprüften Versionen sichtbar. |
+| Verbindung bei Aufgabenanlage unterbrochen | Keine automatische Wiederholung mit anderer Version. Die Vorbereitung bleibt für den Aufgabenabgleich erhalten. |
 | Zeitplan ausführen | Testrechner startet; Anwendungsprotokoll enthält Zeit und Gerät. |
 | Uhrzeit und Wochentage bearbeiten | Bestehende DSM-Aufgabe wird geändert; keine doppelte Aufgabe. |
 | Zeitplan deaktivieren/aktivieren | DSM-Aufgabe und Oberflächenzustand stimmen überein. |

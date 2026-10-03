@@ -156,7 +156,7 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
         raise ValueError("SynoWake must use package privileges only: no executable/tool overrides, setuid or capabilities")
     resource_config = package_root / "conf" / "resource"
     if resource_config.exists() and json.loads(normalized(resource_config)) != {}:
-        raise ValueError("SynoWake must not acquire DSM resources; use application i18n for desktop notifications instead of sysnotify")
+        raise ValueError("Unexpected DSM resource configuration; current SynoWake notifications use application i18n without resource workers")
     ui_root = ROOT / "ui"
     for required in (ui_root / "index.html", ui_root / "app.js", ui_root / "assets" / "synowake.css", ui_root / "scheduler.js"):
         if not required.is_file():

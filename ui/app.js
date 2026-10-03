@@ -1,7 +1,7 @@
-import {DsmScheduler, getSynoToken} from './scheduler.js?v=0.1.6-0007';
+import {DsmScheduler, getSynoToken} from './scheduler.js?v=0.1.10-0011';
 
 const $ = selector => document.querySelector(selector);
-const uiVersion = '0.1.6-0007';
+const uiVersion = '0.1.10-0011';
 const demo = new URLSearchParams(location.search).get('demo') === '1';
 const scheduler = new DsmScheduler();
 const selected = new Set();
@@ -194,6 +194,7 @@ function renderTiles() {
     bottom.append(wake, edit);
     card.append(top, text, bottom);
     if (device.error) card.title = device.error;
+    else if (device.probeMethod === 'tcp') card.title = 'Erreichbarkeit per TCP geprüft.';
     container.append(card);
   }
 }
@@ -233,7 +234,7 @@ function renderDevices() {
     });
     const favoriteCell = element('td'); favoriteCell.append(favorite); row.append(favoriteCell);
     row.append(element('td', 'device-name', device.name), element('td', 'monospace', device.ip), element('td', 'monospace', device.mac));
-    const status = element('td'); status.append(statusBadge(deviceStatus(device))); row.append(status);
+    const status = element('td'); status.append(statusBadge(deviceStatus(device))); status.title = device.error || (device.probeMethod === 'tcp' ? 'Erreichbarkeit per TCP geprüft.' : ''); row.append(status);
     const actions = element('td'); const group = element('div', 'row-actions');
     const wake = button('Aufwecken', 'quiet', () => wakeDevices([device.id])); wake.disabled = deviceStatus(device) === 'waking';
     group.append(wake, button('Bearbeiten', 'quiet', () => openDevice(device)), button('Löschen', 'quiet', () => deleteDevice(device)));
@@ -245,6 +246,14 @@ function dayDescription(days) {
   if (days?.length === 7) return 'Täglich';
   if (JSON.stringify([...(days || [])].sort()) === '[1,2,3,4,5]') return 'Mo–Fr';
   return [...(days || [])].sort((a, b) => (a || 7) - (b || 7)).map(day => weekdays[day]).join(', ');
+}
+
+function automaticScheduleName(payload) {
+  const device = state.devices.find(device => device.id === payload.deviceId);
+  if (!device) throw new Error('Gerät des Zeitplans nicht gefunden.');
+  const suffix = ` · ${dayDescription(payload.days)} · ${payload.time}`;
+  // Keep days and time when a long device name reaches the 80-character limit.
+  return [...device.name].slice(0, 80 - [...suffix].length).join('') + suffix;
 }
 
 function renderSchedules() {
@@ -380,6 +389,7 @@ async function saveSchedule(payload) {
   const previous = state.schedules.find(schedule => schedule.id === payload.id);
   if (previous?.pending || state.pendingSchedules?.some(schedule => schedule.id === payload.id)) throw new Error('Für diese Automatik ist noch eine Vorbereitung offen. Bitte zuerst „Vorbereitung abschließen“ verwenden.');
   const clean = Object.fromEntries(['id', 'name', 'deviceId', 'time', 'days', 'enabled', 'notify'].map(key => [key, payload[key]]));
+  clean.name = clean.name.trim() || automaticScheduleName(clean);
   const prepared = await api('schedule-prepare', clean);
   let saved;
   try { saved = demo ? {taskId: previous?.taskId || Math.floor(Date.now() / 1000), taskOwner: state.user} : await scheduler.upsert(prepared, previous); }
@@ -488,7 +498,7 @@ async function pollStatus() {
   refreshing = true;
   try {
     const data = await api('status');
-    for (const update of data.devices || []) { const device = state.devices.find(item => item.id === update.id); if (device) Object.assign(device, update); }
+    for (const update of data.devices || []) { const device = state.devices.find(item => item.id === update.id); if (device) Object.assign(device, update, {error: update.error || '', probeMethod: update.probeMethod || ''}); }
     renderTiles(); renderDevices(); renderSummary(); updateSelection(); connected(true, demo ? 'Lokale Vorschau · Beispieldaten' : undefined);
   } catch (error) { connected(false); }
   finally { refreshing = false; }
@@ -578,7 +588,7 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.6-0007', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.10-0011', diagnostics: [], settings: {logCenterPort: 0}, active: true,
   networks: [{interface: 'Demo-LAN', ip: '192.168.1.2', cidr: '192.168.1.0/24', searchCidr: '192.168.1.0/24', broadcast: '192.168.1.255'}],
   devices: [
     {id: 'demo1', name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true, status: 'offline'},

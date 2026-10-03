@@ -4,7 +4,13 @@ Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Der Paketname u
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
-**Version 0.1.6-0007: Vorhandene Geräte in Suchtreffern erkennen, Beta mit Zielsystemprüfung.** Bereits gespeicherte Geräte bleiben in der Suche sichtbar und erhalten die Markierung **Bereits vorhanden**. Ihr gespeicherter Name wird angezeigt; Übernahme-Häkchen und Namensfeld sind gesperrt. Der Vergleich verwendet die MAC-Adresse und funktioniert auch bei geänderter IP. Vor der Übernahme wird der Bestand erneut abgefragt; das Backend verhindert zusätzlich neue Einträge mit einer bereits gespeicherten MAC-Adresse.
+**Version 0.1.10-0011: Automatische Namen für Weckzeiten.** Das Namensfeld ist optional. Bleibt es leer oder enthält nur Leerzeichen, verwendet SynoWake Gerätename, ausgewählte Tage und Uhrzeit, beispielsweise `ACER-Frank · Mo–Fr · 08:00`. Alle Tage erscheinen als `Täglich`, einzelne Tage in der Reihenfolge Montag bis Sonntag. Eigene Namen bleiben erhalten. Bei langen Gerätenamen wird nur der Gerätenamenanteil gekürzt, damit Tage und Uhrzeit innerhalb der 80-Zeichen-Grenze erhalten bleiben.
+
+Die Aufgabenanlage über die native DSM-Sitzungsanbindung aus 0.1.9 wurde vom Benutzer auf der Ziel-NAS bestätigt. Im DSM-Fenster verwendet SynoWake `SYNO.API.Request` des übergeordneten DSM-Dokuments. Diese übernimmt den aktuellen Sitzungsschutz einschließlich `X-SYNO-HASH`. Ein Fehler 105 wird als Ablehnung der Sitzung beschrieben und nicht pauschal als fehlende Administratoranmeldung.
+
+Die Versionswahl aus 0.1.8 bleibt erhalten: SynoWake bevorzugt die Katalogversion und berücksichtigt für get/create/set die Versionen 2 bis 4. Nur bei einer ausdrücklichen Versionsablehnung (104) wird eine andere Version versucht; erfolgreiche Versionen werden pro Methode für die laufende Oberfläche gemerkt. Verbindungsfehler, unklare Antworten und andere API-Fehler führen zu keiner automatischen Wiederholung. Ein unterbrochener nativer DSM-Aufruf wechselt nicht zum direkten Aufruf. Bei gesperrtem ICMP bleibt die TCP-Erreichbarkeitsprüfung erhalten.
+
+Bereits gespeicherte Geräte bleiben in der Suche sichtbar und erhalten die Markierung **Bereits vorhanden**. Ihr gespeicherter Name wird angezeigt; Übernahme-Häkchen und Namensfeld sind gesperrt. Der Vergleich verwendet die MAC-Adresse und funktioniert auch bei geänderter IP. Vor der Übernahme wird der Bestand erneut abgefragt; das Backend verhindert zusätzlich neue Einträge mit einer bereits gespeicherten MAC-Adresse.
 
 Die Favoriten-Auswahl aus 0.1.5 bleibt erhalten: Nur markierte Geräte erscheinen als Kacheln. Neue Suchtreffer beginnen ohne Häkchen. Die Suche merkt sich den zuletzt erfolgreich verwendeten Bereich und schlägt sonst das aktive NAS-Netz vor. Bekannte lokale DNS-Endungen werden aus Namensvorschlägen entfernt. Die Oberflächendateien verwenden URLs mit Paketversion. Nach dem Update DSM vollständig neu laden, beim beschriebenen Firefox-Ablauf mit **Shift+Klick auf den Aktualisieren-Knopf**.
 
@@ -32,6 +38,8 @@ CSS-Regression prüfen: `node scripts/test-ui.mjs` starten und die ausgegebene l
 
 Den gesamten Oberflächenablauf einschließlich Favoriten, Geräteübernahme und simulierten DSM-WebAPI-Antworten prüft `node tests/workflow.cjs` mit Playwright. `PLAYWRIGHT_MODULE` kann den Pfad zur installierten Playwright-Bibliothek und `BROWSER_EXECUTABLE` den Pfad zu Chromium oder Edge vorgeben. Screenshots und CSS-Prüfergebnis werden unter `work/` gespeichert. Backend-Tests: `go test ./...`.
 
+`node tests/scheduler.cjs` prüft außerdem Methodenaufrufe trotz Katalogversion 3, API-Erkennung über moderne und ältere Endpunkte, Fehlercodes und sichere Wiederaufnahme unterbrochener Aufgabenplaner-Anfragen. Die native DSM-Anbindung wird mit typisierten Parametern, Versionsablehnung, Berechtigungsfehler, Verbindungsabbruch, Timeout und verspäteter Antwort geprüft. Der Browser-Test prüft Aufgabenanlage, Änderungen, Abgleich und Löschen über eine nachgebildete DSM-Anfragefunktion sowie deren Zugriff aus einem eingebetteten iframe.
+
 Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` eingestellt. Es ist nicht signiert und wird als Beta gekennzeichnet.
 
 ## Installation und erste Verwendung
@@ -46,9 +54,13 @@ Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` ei
 
 Wenn das DSM-Anwendungsfenster auf der konkreten Firmware nicht lädt, die Oberfläche nach DSM-Anmeldung direkt unter `https://NAS:DSM-Port/webman/3rdparty/SynoWake/index.html` öffnen. Für einen eigenen HTTPS-Port dessen Wert einsetzen. Das ist zugleich ein Diagnoseweg für die Fensterintegration.
 
+Für Automatiken SynoWake aus dem DSM-Hauptmenü öffnen. Bei einer direkt geöffneten Oberfläche fehlt die übergeordnete DSM-Anfragefunktion; der direkte WebAPI-Ersatz kann deshalb je nach DSM-Sitzungsschutz abgelehnt werden.
+
 ## Status und Netzwerksuche
 
-`Online` bedeutet, dass die NAS eine ICMP-Antwort erhält. `Offline` bedeutet, dass derzeit keine solche Antwort vorliegt; eine Firewall kann einen laufenden Rechner ebenfalls so erscheinen lassen. Nach einem gesendeten Magic Packet zeigt SynoWake zunächst `Wird aufgeweckt` und prüft erneut. Das Senden allein beweist keinen erfolgreichen Start.
+`Online` bedeutet, dass die NAS eine ICMP-Antwort erhält oder bei nicht verfügbarem ICMP eine TCP-Verbindung beziehungsweise eine ausdrückliche Verbindungsablehnung feststellt. Letztere zeigt ebenfalls eine IP-Antwort. `Offline` bedeutet bei nutzbarem ICMP, dass keine Antwort vorliegt; eine Firewall kann einen laufenden Rechner ebenfalls so erscheinen lassen. Ist ICMP nicht verfügbar und bleibt auch TCP ohne Antwort, erscheint **Unbekannt**. Nach einem gesendeten Magic Packet zeigt SynoWake zunächst bis zu 90 Sekunden `Wird aufgeweckt` und prüft erneut. Das Senden allein beweist keinen erfolgreichen Start.
+
+Der TCP-Ersatz prüft die Ports 445, 80, 443, 22, 3389 und 5000 parallel mit insgesamt 800 ms Frist pro Gerät. Es werden keine Anmeldedaten oder Anwendungsbefehle gesendet. Die Suche meldet die Verwendung dieses Ersatzwegs; die Statusanzeige erklärt ihn beim Überfahren mit der Maus. Raw-Socket-Rechte, Root-Ausführung, Datei-Capabilities und Änderungen an DSM-Kernelparametern werden nicht angefordert. Vollständig gefilterte Geräte können nicht eindeutig als ausgeschaltet erkannt werden.
 
 Beim Öffnen der Suche ermittelt SynoWake die aktiven IPv4-Netze der NAS und füllt den Suchbereich automatisch aus. Mehrere Schnittstellen sind auswählbar. Bevorzugt wird die Schnittstelle, über deren Adresse die DSM-Anfrage eingeht. Ein festes `192.168.1.0/24` oder die Adresse des ersten gespeicherten Geräts wird nicht als Standard verwendet. Loopback, nicht aktive Schnittstellen und `169.254.*` werden nicht angeboten.
 

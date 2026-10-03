@@ -566,6 +566,7 @@ func (a *App) statusHTTP(w http.ResponseWriter, s Store) {
 		Status   string    `json:"status"`
 		LastWake time.Time `json:"lastWake"`
 		Error    string    `json:"error,omitempty"`
+		Method   string    `json:"probeMethod,omitempty"`
 	}
 	results := make([]status, len(s.Devices))
 	var wg sync.WaitGroup
@@ -579,25 +580,26 @@ func (a *App) statusHTTP(w http.ResponseWriter, s Store) {
 			defer func() { <-sem }()
 			online := false
 			var err error
+			method := ""
 			if a.Demo {
 				online = d.WakeState == "waking" && time.Since(d.LastWake) > 6*time.Second
 			} else {
-				online, err = ping(d.IP)
+				online, method, err = probeHost(d.IP)
 			}
 			value := "offline"
-			if err != nil {
-				value = "unknown"
-			} else if online {
+			if online {
 				value = "online"
 			} else if d.WakeState == "waking" && time.Since(d.LastWake) < 90*time.Second {
 				value = "waking"
+			} else if err != nil {
+				value = "unknown"
 			}
-			entry := status{ID: d.ID, Status: value, LastWake: d.LastWake}
+			entry := status{ID: d.ID, Status: value, LastWake: d.LastWake, Method: method}
 			if err != nil {
 				entry.Error = err.Error()
 			}
 			results[i] = entry
-			if d.WakeState == "waking" && err == nil && (online || time.Since(d.LastWake) >= 90*time.Second) {
+			if d.WakeState == "waking" && (online || time.Since(d.LastWake) >= 90*time.Second) {
 				changed := false
 				a.update(func(store *Store) error {
 					for j, current := range store.Devices {
@@ -612,7 +614,7 @@ func (a *App) statusHTTP(w http.ResponseWriter, s Store) {
 					msg := "Gerät ist online: " + d.Name
 					level := "info"
 					if !online {
-						msg = "Keine ICMP-Antwort nach Aufwecken: " + d.Name
+						msg = "Kein Erreichbarkeitsnachweis nach Aufwecken: " + d.Name
 						level = "warning"
 					}
 					a.event(Log{Level: level, Source: "status", DeviceID: d.ID, Message: msg}, false)
