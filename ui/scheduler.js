@@ -1,4 +1,4 @@
-import {t} from './i18n.js?v=0.1.13-0014';
+import {t} from './i18n.js?v=0.1.14-0015';
 // DSM's private TaskScheduler API is discovered at runtime. No crontab writes.
 const API = 'SYNO.Core.TaskScheduler';
 const TASK_PREFIX = 'SynoWake: ';
@@ -86,7 +86,9 @@ export class DsmScheduler {
     const info = await this.discover();
     const minimum = Number(info.minVersion || 1);
     const maximum = Number(info.maxVersion || 4);
-    const known = version !== undefined ? [version] : ['create', 'get', 'set'].includes(method) ? [4, 3, 2] : [4];
+    // DSM 7.1's own task grid uses list v2 despite a catalog maximum of 3.
+    // Newer implementations use list v3. Keep write-method selection separate.
+    const known = version !== undefined ? [version] : method === 'list' ? [2, 3] : ['create', 'get', 'set'].includes(method) ? [4, 3, 2] : [4];
     // Prefer advertised versions, then allow known newer method versions when
     // the catalog is outdated. Cache successful versions separately per method.
     const candidates = [...new Set([this.methodVersions.get(method), ...known.filter(value => value <= maximum), ...known.filter(value => value > maximum)])].filter(value => known.includes(value) && value >= minimum);
@@ -97,10 +99,10 @@ export class DsmScheduler {
         this.methodVersions.set(method, candidate);
         return result;
       } catch (error) {
-        // Error 104 explicitly rejects dispatch of this version. Only then is
-        // another version safe, including for create. Never retry an ambiguous
-        // write, HTTP failure, lost response, permission or parameter error.
-        if (error.code !== 104 || error.uncertain) throw error;
+        // 104 rejects this version before execution. Read-only list can also
+        // try its other known version after method rejection (103). Writes
+        // still never retry on 103 or an ambiguous outcome/transport failure.
+        if ((error.code !== 104 && !(method === 'list' && error.code === 103)) || error.uncertain) throw error;
         this.methodVersions.delete(method);
         if (index === candidates.length - 1) {
           error.message += t(" Geprüfte Versionen: {0}.", candidates.join(', '));
@@ -193,7 +195,7 @@ export class DsmScheduler {
     const seen = new Set();
     let total;
     do {
-      const result = await this.call('list', {sort_by: 'name', sort_direction: 'ASC', offset: tasks.length, limit: 100}, 3);
+      const result = await this.call('list', {sort_by: 'name', sort_direction: 'asc', offset: tasks.length, limit: 100});
       const count = Number(result.total);
       if (result.total === undefined || result.total === null || result.total === '' || !Number.isInteger(count) || count < 0 || !Array.isArray(result.tasks)) throw new Error(t("DSM liefert keine vollständige Aufgabenliste. Die SynoWake-Zuordnung bleibt für eine sichere Prüfung erhalten."));
       if (count > 1000) throw new Error(t("Zu viele DSM-Aufgaben für eine sichere automatische Zuordnung. Bitte im DSM-Aufgabenplaner prüfen."));

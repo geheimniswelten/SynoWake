@@ -34,12 +34,14 @@ This checklist describes testing on the target NAS. A local build or browser dem
 | Save with a custom name | Entered name is preserved. |
 | Open via DSM; account can create native tasks | Creation uses DSM's session transport and current protection without erroneous error 105. |
 | Lose the native request's response | No raw fallback or duplicate creation. Preparation remains recoverable; a late response does not register it afterward. |
-| Catalog advertises TaskScheduler version 3 | get/create/set prefer 3 and try compatible alternatives only after 104. list uses 3, delete 2; successful versions are cached per method. |
+| Catalog advertises TaskScheduler version 3 | get/create/set prefer 3 and try compatible alternatives only after 104. list starts with 2 and tries alternative 3 only after 103/104; delete uses 2; successful versions are cached per method. |
 | DSM rejects create version 4 with 104 | A supported alternative is used; exactly one task is created. Complete rejection lists checked versions. |
 | Interrupt task creation | No speculative retry using another version; preparation remains for reconciliation. |
 | Execute a schedule | Target starts; the application log records time and device. |
 | Edit time/weekdays | Existing DSM task changes without duplication. |
 | Disable/enable a schedule | DSM task and interface state agree. |
+| Delete a schedule; catalog advertises 3 but list v3 would return 103 | Complete inventory uses v2, followed by owner, prefix and command checks. Exactly the mapped DSM task and its local registration are removed. |
+| list v2 explicitly returns 103/104 | Only this read-only call tries known alternative v3. Permission, session, transport and malformed-response failures retain the local mapping without any delete request. |
 | Enable notifications | A desktop success/failure message appears in the recipient's language. Disabled notifications remain absent. |
 | Close the application before execution | Notifications still work through `preloadTexts`. Check German/English recipients and device names containing umlauts, braces, percent signs or angle brackets. |
 | Open Log Center | The wake action is identifiable as SynoWake. Do not ignore an integration diagnostic. |

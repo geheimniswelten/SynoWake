@@ -1,6 +1,6 @@
 package="SynoWake"
 displayname="SynoWake"
-version="0.1.13-0014"
+version="0.1.14-0015"
 description="Wake-on-LAN devices, discover hosts and manage DSM Task Scheduler wake schedules."
 description_enu="Wake-on-LAN devices, discover hosts and manage DSM Task Scheduler wake schedules."
 description_ger="Wake-on-LAN mit Gerätekacheln, Netzwerksuche und Zeitplänen im DSM-Aufgabenplaner."

@@ -34,12 +34,14 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Weckzeit mit eigenem Namen speichern | Der eingetragene Name wird übernommen. |
 | SynoWake über DSM-Hauptmenü öffnen; Konto kann direkt im DSM Aufgaben anlegen | Aufgabenanlage verwendet die native DSM-Sitzung mit aktuellem Sitzungsschutz und wird nicht mit Fehler 105 abgelehnt. |
 | Native Aufgabenanfrage verliert ihre Antwort | Kein direkter Ersatzaufruf und keine doppelte Anlage. Die Vorbereitung bleibt für den Aufgabenabgleich erhalten; eine verspätete Antwort registriert sie nicht nachträglich lokal. |
-| API-Katalog meldet TaskScheduler-Version 3 | get/create/set beginnen mit Version 3 und wechseln ausschließlich bei Fehler 104 auf kompatible Alternativen. list verwendet 3, delete 2. Erfolgreiche Versionen werden pro Methode gemerkt. |
+| API-Katalog meldet TaskScheduler-Version 3 | get/create/set beginnen mit Version 3 und wechseln ausschließlich bei Fehler 104 auf kompatible Alternativen. list verwendet zunächst 2 und versucht nur bei Fehler 103/104 die Alternative 3; delete verwendet 2. Erfolgreiche Versionen werden pro Methode gemerkt. |
 | DSM lehnt create-Version 4 mit Fehler 104 ab | Eine unterstützte Alternative wird verwendet. Genau eine Aufgabe wird angelegt; bei vollständiger Versionsablehnung bleibt ein Fehler mit den geprüften Versionen sichtbar. |
 | Verbindung bei Aufgabenanlage unterbrochen | Keine automatische Wiederholung mit anderer Version. Die Vorbereitung bleibt für den Aufgabenabgleich erhalten. |
 | Zeitplan ausführen | Testrechner startet; Anwendungsprotokoll enthält Zeit und Gerät. |
 | Uhrzeit und Wochentage bearbeiten | Bestehende DSM-Aufgabe wird geändert; keine doppelte Aufgabe. |
 | Zeitplan deaktivieren/aktivieren | DSM-Aufgabe und Oberflächenzustand stimmen überein. |
+| Zeitplan löschen; API-Katalog meldet 3, list Version 3 würde Fehler 103 liefern | Vollständige Aufgabenliste wird mit Version 2 gelesen, anschließend Besitzer, Präfix und Befehl geprüft. Genau die zugehörige Aufgabe und ihre lokale Zuordnung werden gelöscht. |
+| list Version 2 wird ausdrücklich mit 103/104 abgelehnt | Lesender Aufruf verwendet die bekannte Alternative 3. Bei Berechtigungs-, Sitzungs-, Verbindungs- oder Antwortfehler bleibt die Zuordnung erhalten; kein Löschaufruf. |
 | Benachrichtigung aktivieren | DSM-Desktopmeldung mit Titel und tatsächlichem Ausführungstext erscheint bei der Ausführung; bei ausgeschaltetem Haken fehlt sie. |
 | App-Fenster schließen und Zeitplan ausführen | Benachrichtigung erscheint weiterhin durch `preloadTexts`; Deutsch/Englisch und Gerätenamen mit Umlauten, Prozentzeichen oder spitzen Klammern prüfen. |
 | Protokoll-Center öffnen | Die Wake-Aktion ist dort mit SynoWake-Kennung nachvollziehbar. Eine Diagnose in SynoWake darf nicht übergangen werden. |

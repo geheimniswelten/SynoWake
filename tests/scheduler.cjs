@@ -20,6 +20,7 @@ async function run() {
     const parameters = Object.fromEntries([...body].filter(([key]) => !['api', 'method', 'version', 'SynoToken'].includes(key)).map(([key,value]) => [key, JSON.parse(value)]));
     let data;
     if (method === 'list') {
+      if (body.get('version') !== '2') return Response.json({success: false, error: {code: 103}});
       const offset = parameters.offset; offsets.push(offset);
       if (mode === 'normal') data = {tasks: tasks.slice(offset, offset + 50), total: 150};
       if (mode === 'gap') data = {tasks: offset ? [] : tasks.slice(0, 50), total: 150};
@@ -80,6 +81,52 @@ async function run() {
   await assert.rejects(new DsmScheduler().remove(mapped), /unvollständig/);
   assert.equal(deleteCalls, 2, 'A partial inventory must block deletion before any mutation');
   console.log('PASS: Deletion proves complete inventory absence, guards foreign scripts, reconciles a lost successful response, and preserves local state for unresolved deletion and partial inventory.');
+  // The DSM 7.1 native task grid uses list v2, while newer implementations use
+  // v3. Only read-only list may also negotiate after method rejection (103).
+  for (const transport of ['raw', 'native']) {
+    for (const rejection of [103, 104]) {
+      const reads = [];
+      let unsafeWrites = 0;
+      global.fetch = async (url, options = {}) => {
+        if (url.includes('?')) return Response.json({success: true, data: {'SYNO.Core.TaskScheduler': {path: 'entry.cgi', minVersion: 1, maxVersion: 3, requestFormat: 'JSON'}}});
+        assert.equal(transport, 'raw', 'Native negotiation must not switch to raw transport');
+        const body = new URLSearchParams(options.body);
+        const reply = respond(body.get('method'), Number(body.get('version')));
+        return Response.json(reply);
+      };
+      const respond = (method, version) => {
+        if (method !== 'list') { unsafeWrites++; throw new Error('Unexpected mutation during list negotiation'); }
+        reads.push(version);
+        return version === 2 ? {success: false, error: {code: rejection}} : {success: true, data: {tasks: [], total: 0}};
+      };
+      window.parent = transport === 'native' ? {SYNO: {API: {Request(request) {
+        const reply = respond(request.method, request.version);
+        request.callback(reply.success, reply.success ? reply.data : reply.error);
+      }}}} : {};
+      const scheduler = new DsmScheduler();
+      assert.deepEqual(await scheduler.inventory(), []);
+      assert.deepEqual(await scheduler.inventory(), []);
+      assert.deepEqual(reads, [2, 3, 3], 'List starts at DSM 7.1 v2 and caches the successful alternative per method');
+      assert.equal(unsafeWrites, 0);
+    }
+    for (const failure of [105, 106, 109, 'network', 'malformed']) {
+      let attempts = 0;
+      global.fetch = async url => {
+        if (url.includes('?')) return Response.json({success: true, data: {'SYNO.Core.TaskScheduler': {path: 'entry.cgi', minVersion: 1, maxVersion: 3, requestFormat: 'JSON'}}});
+        assert.equal(transport, 'raw'); attempts++;
+        if (failure === 'network') throw new Error('Lost list response');
+        if (failure === 'malformed') return new Response('not JSON');
+        return Response.json({success: false, error: {code: failure}});
+      };
+      window.parent = transport === 'native' ? {SYNO: {API: {Request(request) {
+        attempts++; request.callback(false, failure === 'network' ? {status: 0} : failure === 'malformed' ? {code: ''} : {code: failure});
+      }}}} : {};
+      await assert.rejects(new DsmScheduler().remove(mapped));
+      assert.equal(attempts, 1, 'List permission, session, network and malformed failures block deletion without negotiation');
+    }
+  }
+  window.parent = {};
+  console.log('PASS: DSM 7.1 list v2; read-only 103/104 fallback to v3 and per-method cache through raw and native transports; other failures block deletion without retries.');
   const info = {path: 'entry.cgi', minVersion: 1, maxVersion: 3, requestFormat: 'JSON'};
   for (const discoveryMode of ['modern', 'legacy-404', 'legacy-empty', 'no-api', 'unsafe-path']) {
     const infoCalls = []; const commands = [];

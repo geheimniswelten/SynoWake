@@ -158,7 +158,7 @@ async function run() {
   const deviceId = 'a'.repeat(32);
   const scheduleId = 'b'.repeat(32);
   const command = `'bin/synowake' '--run-schedule' '${scheduleId}' '--token' '${'c'.repeat(64)}'`;
-  const data = {user: 'tester', version: '0.1.13-0014', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
+  const data = {user: 'tester', version: '0.1.14-0015', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
   const networks = [
     {interface: 'eth0', ip: '192.167.178.21', cidr: '192.167.178.0/24', searchCidr: '192.167.178.0/24', broadcast: '192.167.178.255'},
     {interface: 'eth1', ip: '10.42.0.130', cidr: '10.42.0.128/25', searchCidr: '10.42.0.128/25', broadcast: '10.42.0.255'}
@@ -182,6 +182,10 @@ async function run() {
     assert.equal(body.get('SynoToken'), 'dsm-token');
     calls.push(parsed);
     let result = {};
+    // Match DSM 7.1: the catalog advertises 3, but list exists at version 2.
+    if (method === 'list' && parsed.version !== '2') {
+      await route.fulfill({contentType: 'application/json', body: JSON.stringify({success: false, error: {code: 103}})}); return;
+    }
     if (['create', 'get', 'set'].includes(method) && parsed.version !== '2') {
       await route.fulfill({contentType: 'application/json', body: JSON.stringify({success: false, error: {code: 104}})}); return;
     }
@@ -232,7 +236,7 @@ async function run() {
   });
   await production.goto(base);
   const assetRequests = await production.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name));
-  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.13-0014`)), `Cache version missing for ${asset}`);
+  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=0.1.14-0015`)), `Cache version missing for ${asset}`);
   await production.locator('.status.offline').first().waitFor();
   statusReply = {devices: [{id: deviceId, status: 'unknown', probeMethod: 'tcp', error: 'Keine TCP-Antwort. Status unbekannt.'}]};
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -359,6 +363,9 @@ async function run() {
   await production.locator('#confirm-dialog').waitFor({state: 'hidden'});
   assert.equal(tasks.size, 0);
   assert.equal(data.schedules.length, 0);
+  assert.ok(calls.some(call => call.method === 'list'));
+  assert.ok(calls.filter(call => call.method === 'list').every(call => call.version === '2'), 'Recovery and deletion use the native DSM 7.1 list version');
+  assert.equal(calls.filter(call => call.method === 'delete').length, 1, 'The owned DSM task is deleted exactly once');
   assert.deepEqual(errors, []);
   await production.route('**/native-session-child', route => route.fulfill({contentType: 'text/html', body: '<!doctype html><title>Session child</title>'}));
   const childNavigation = production.waitForEvent('framenavigated', {predicate: frame => frame.url().endsWith('/native-session-child')});
@@ -370,7 +377,7 @@ async function run() {
   const childResult = await child.evaluate(async baseURL => {
     if (window.SYNO?.API?.Request) throw new Error('The child must obtain the session API from its DSM parent');
     const {DsmScheduler} = await import(`${baseURL}/scheduler.js`);
-    return new DsmScheduler().call('list', {offset: 0, limit: 100}, 3);
+    return new DsmScheduler().call('list', {offset: 0, limit: 100});
   }, base);
   assert.deepEqual(childResult, {tasks: [], total: 0}, 'An embedded iframe must use its parent DSM session API');
   console.log('PASS: Production CGI headers/CSRF, native DSM session transport for create/get/set/list/delete and embedded iframe, foreign task guard, commit recovery and persisted pending recovery.');
