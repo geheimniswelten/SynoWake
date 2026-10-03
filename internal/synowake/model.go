@@ -93,21 +93,19 @@ func cleanName(value string) (string, error) {
 	}
 	return value, nil
 }
-func privateIPv4(value string) net.IP {
-	ip := net.ParseIP(value)
-	if ip == nil || ip.To4() == nil || !ip.IsPrivate() {
-		return nil
-	}
-	return ip.To4()
-}
 func validateDevice(d *Device) error {
+	networks, _ := localNetworks()
+	return validateDeviceForNetworks(d, networks)
+}
+func validateDeviceForNetworks(d *Device, networks []LocalNetwork) error {
 	var err error
 	d.Name, err = cleanName(d.Name)
 	if err != nil {
 		return err
 	}
-	if privateIPv4(d.IP) == nil {
-		return errors.New("IP muss eine private IPv4-Adresse sein (10.*, 172.16–31.* oder 192.168.*).")
+	ip := lanIPv4(d.IP)
+	if ip == nil || (!ip.IsPrivate() && !isOnLinkHost(ip, networks)) {
+		return errors.New("IP muss eine private oder direkt an der NAS angeschlossene IPv4-LAN-Adresse sein.")
 	}
 	mac, err := net.ParseMAC(d.MAC)
 	if err != nil || len(mac) != 6 || mac[0]&1 != 0 || strings.EqualFold(mac.String(), "00:00:00:00:00:00") {
@@ -117,9 +115,13 @@ func validateDevice(d *Device) error {
 	if d.Broadcast == "" {
 		d.Broadcast = "255.255.255.255"
 	}
-	ip := net.ParseIP(d.Broadcast)
-	if ip == nil || ip.To4() == nil || (!ip.IsPrivate() && d.Broadcast != "255.255.255.255") {
-		return errors.New("Broadcast muss eine private IPv4-Adresse oder 255.255.255.255 sein.")
+	broadcast := lanIPv4(d.Broadcast)
+	validBroadcast := d.Broadcast == "255.255.255.255" || (broadcast != nil && broadcast.IsPrivate())
+	for _, local := range networks {
+		validBroadcast = validBroadcast || (local.Broadcast != "" && d.Broadcast == local.Broadcast)
+	}
+	if !validBroadcast {
+		return errors.New("Broadcast muss eine lokale NAS-Broadcast-Adresse, eine private IPv4-Adresse oder 255.255.255.255 sein.")
 	}
 	if d.Port == 0 {
 		d.Port = 9

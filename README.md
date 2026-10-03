@@ -4,7 +4,7 @@ Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Der Paketname u
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
-**Version 0.1.2-0003: korrigierte Beta, Zielsystemprüfung erforderlich.** Der Paketdienst verwendet ausschließlich das Paketkonto. Die CGI-Weiterleitung benötigt keine erhöhten Ausführungsrechte. Das Paket fordert keine DSM-Ressourcen an; die von DSM abgelehnte `sysnotify`-Registrierung wurde entfernt. Desktop-Benachrichtigungen verwenden App-Sprachtexte. Eine erfolgreiche Installation auf einer DS918+ und die DSM-internen Integrationen können erst an der tatsächlichen NAS bestätigt werden. Aufgabenplaner, Dienststart, DSM-Fenster, Protokoll-Center und Benachrichtigungen gehören zur Abnahme.
+**Version 0.1.3-0004: Netzwerkerkennung korrigiert, Beta mit Zielsystemprüfung.** Die Suche verwendet aktive NAS-Schnittstellen und deren Netzmasken. Auch direkt angeschlossene Netze außerhalb der privaten IPv4-Bereiche werden unterstützt. Der Paketdienst verwendet ausschließlich das Paketkonto. Die CGI-Weiterleitung benötigt keine erhöhten Ausführungsrechte. Das Paket fordert keine DSM-Ressourcen an; Desktop-Benachrichtigungen verwenden App-Sprachtexte. Netzwerkverkehr, Aufgabenplaner, Protokoll-Center und Benachrichtigungen müssen auf der tatsächlichen NAS bestätigt werden.
 
 ## Paket bauen
 
@@ -29,7 +29,7 @@ Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` ei
 1. Im DSM mit einem Administratorkonto anmelden.
 2. **Paket-Zentrum → Manuelle Installation** öffnen und die erzeugte `.spk` auswählen. DSM zeigt bei diesem privaten Paket eine Warnung zum Herausgeber; Inhalt und Herkunft vor dem Fortfahren prüfen.
 3. Paket starten und **SynoWake** über das Hauptmenü oder die Schaltfläche **Öffnen** aufrufen.
-4. Im Tab **Geräte** ein Gerät mit Name, privater IPv4-Adresse und MAC-Adresse anlegen. Der Name bleibt bearbeitbar. Broadcast-Adresse und UDP-Port können bei Bedarf angepasst werden.
+4. Im Tab **Geräte** ein Gerät mit Name, IPv4-LAN-Adresse und MAC-Adresse anlegen. Private Adressen sowie Adressen aus direkt angeschlossenen NAS-Netzen werden akzeptiert. Der Name bleibt bearbeitbar. Broadcast-Adresse und UDP-Port können bei Bedarf angepasst werden.
 5. Wake-on-LAN im BIOS/UEFI, Betriebssystem und Netzwerktreiber des Zielgeräts aktivieren. Zunächst im gleichen kabelgebundenen LAN testen.
 6. Auf der Startseite auf eine Gerätekachel klicken oder mehrere Geräte über die Schnellauswahl aufwecken.
 7. Im Tab **Automatik** Gerät, Uhrzeit, Wochentage und optional DSM-Benachrichtigungen wählen. Die Uhrzeit folgt der Zeitzone der NAS.
@@ -40,7 +40,11 @@ Wenn das DSM-Anwendungsfenster auf der konkreten Firmware nicht lädt, die Oberf
 
 `Online` bedeutet, dass die NAS eine ICMP-Antwort erhält. `Offline` bedeutet, dass derzeit keine solche Antwort vorliegt; eine Firewall kann einen laufenden Rechner ebenfalls so erscheinen lassen. Nach einem gesendeten Magic Packet zeigt SynoWake zunächst `Wird aufgeweckt` und prüft erneut. Das Senden allein beweist keinen erfolgreichen Start.
 
-Die Suche akzeptiert private IPv4-Netze von `/24` bis `/30`, die an einer lokalen NAS-Schnittstelle liegen. Sie prüft Hosts und liest Nachbartabellen. IP und MAC lassen sich aus Treffern in die Geräteliste übernehmen. Wenn Reverse-DNS einen Namen liefert, wird dieser vorgeschlagen; sonst erscheint ein allgemeiner LAN-Gerätetyp. Namen können jederzeit angepasst werden.
+Beim Öffnen der Suche ermittelt SynoWake die aktiven IPv4-Netze der NAS und füllt den Suchbereich automatisch aus. Mehrere Schnittstellen sind auswählbar. Bevorzugt wird die Schnittstelle, über deren Adresse die DSM-Anfrage eingeht. Ein festes `192.168.1.0/24` oder die Adresse des ersten gespeicherten Geräts wird nicht als Standard verwendet. Loopback, nicht aktive Schnittstellen und `169.254.*` werden nicht angeboten.
+
+Die Suche akzeptiert `/24` bis `/30`, vollständig innerhalb eines angeschlossenen Schnittstellennetzes. Direkt angeschlossene Netze wie `192.167.178.0/24` werden ebenfalls akzeptiert. Kleinere Teilnetze behalten die echte Netzmaske; bei größeren Netzen wird zunächst der `/24`-Bereich mit der NAS-Adresse vorgeschlagen. Weitere passende Teilbereiche lassen sich eingeben. Die Begrenzung liegt bei 254 Hostadressen pro Suche.
+
+Die Suche prüft Hosts und liest Nachbartabellen. IP, MAC und die Broadcast-Adresse der zugehörigen NAS-Schnittstelle lassen sich aus Treffern übernehmen. Damit funktioniert auch das Speichern eines Geräts aus einem angeschlossenen Netz außerhalb der privaten IPv4-Bereiche. Wenn Reverse-DNS einen Namen liefert, wird dieser vorgeschlagen; sonst erscheint ein allgemeiner LAN-Gerätetyp. Namen können jederzeit angepasst werden.
 
 Schlafende Geräte, entfernte VLANs und Hosts ohne verwertbaren Nachbartabelleneintrag können fehlen. Solche Geräte manuell eintragen. Eine IP-Fixierung bzw. DHCP-Reservierung verhindert, dass ein gespeichertes Gerät später eine andere Adresse erhält.
 

@@ -13,6 +13,7 @@ let toastTimer;
 let refreshing = false;
 let confirmAction;
 let scanResults = [];
+let lastDiscoveryNetwork = '';
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -379,10 +380,28 @@ function deleteSchedule(schedule) {
   });
 }
 
-function openDiscover() {
-  const ip = state.devices[0]?.ip;
-  if (ip) $('#discover-form').elements.namedItem('cidr').value = `${ip.split('.').slice(0, 3).join('.')}.0/24`;
+async function openDiscover() {
+  try { await refreshState(); }
+  catch (error) { toast(error.message, true); return; }
+  const networks = (state.networks || []).filter(network => network.searchCidr);
+  const select = $('#discover-network'); select.replaceChildren();
+  for (const network of networks) {
+    const option = element('option', '', `${network.interface} · ${network.ip} · ${network.cidr}`);
+    option.value = network.searchCidr; select.append(option);
+  }
+  $('#discover-network-field').hidden = !networks.length;
+  const preferred = networks.find(network => network.searchCidr === lastDiscoveryNetwork) || networks[0];
+  select.value = preferred?.searchCidr || '';
+  $('#discover-form').elements.namedItem('cidr').value = select.value;
+  clearDiscovery();
+  if (state.networkError) $('#discover-warnings').append(element('div', 'notice error', state.networkError));
+  else if (!networks.length) $('#discover-warnings').append(element('div', 'notice warning', 'Kein durchsuchbares NAS-Netz erkannt. Einen angeschlossenen IPv4-Suchbereich von /24 bis /30 eingeben.'));
   $('#discover-dialog').showModal();
+}
+
+function clearDiscovery() {
+  scanResults = []; renderDiscovery();
+  $('#discover-warnings').replaceChildren(); $('#discover-progress').textContent = '';
 }
 
 function renderDiscovery() {
@@ -428,6 +447,12 @@ for (const dialog of document.querySelectorAll('dialog')) dialog.addEventListene
 $('#dashboard-add').addEventListener('click', () => openDevice());
 $('#device-add').addEventListener('click', () => openDevice());
 $('#discover-open').addEventListener('click', openDiscover);
+$('#discover-network').addEventListener('change', event => {
+  lastDiscoveryNetwork = event.target.value;
+  $('#discover-form').elements.namedItem('cidr').value = event.target.value;
+  clearDiscovery();
+});
+$('#discover-form').elements.namedItem('cidr').addEventListener('input', clearDiscovery);
 $('#schedule-add').addEventListener('click', () => openSchedule());
 $('#device-search').addEventListener('input', renderDevices);
 $('#select-all').addEventListener('change', event => { selected.clear(); if (event.target.checked) state.devices.forEach(device => selected.add(device.id)); renderTiles(); updateSelection(); });
@@ -487,7 +512,7 @@ $('#discover-import').addEventListener('click', async event => {
     for (const check of $('#discover-results').querySelectorAll('input[type=checkbox]:checked:not(:disabled)')) {
       const index = Number(check.dataset.index); const device = scanResults[index];
       const name = $('#discover-results').querySelector(`input[type=text][data-index="${index}"]`).value.trim() || device.name || device.type || device.ip;
-      await api('device-save', {name, ip: device.ip, mac: device.mac, broadcast: '', port: 9}); count++; check.checked = false;
+      await api('device-save', {name, ip: device.ip, mac: device.mac, broadcast: device.broadcast || '', port: 9}); count++; check.checked = false;
     }
     await refreshState(); $('#discover-dialog').close(); toast(`${count} ${count === 1 ? 'Gerät übernommen' : 'Geräte übernommen'}.`);
   } catch (error) { $('#discover-warnings').append(element('div', 'notice error', `${count ? `${count} Gerät(e) bereits übernommen. ` : ''}${error.message}`)); await refreshState().catch(() => {}); }
@@ -495,7 +520,8 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.2', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.3', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  networks: [{interface: 'Demo-LAN', ip: '192.168.1.2', cidr: '192.168.1.0/24', searchCidr: '192.168.1.0/24', broadcast: '192.168.1.255'}],
   devices: [
     {id: 'demo1', name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, status: 'offline'},
     {id: 'demo2', name: 'Medien-PC', ip: '192.168.1.32', mac: 'A0:B1:C2:D3:E4:02', broadcast: '192.168.1.255', port: 9, status: 'online'},

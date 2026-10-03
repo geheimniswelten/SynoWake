@@ -47,51 +47,36 @@ func wake(d Device) error {
 }
 
 type FoundDevice struct {
-	Name string `json:"name"`
-	IP   string `json:"ip"`
-	MAC  string `json:"mac"`
-	Type string `json:"type"`
+	Name      string `json:"name"`
+	IP        string `json:"ip"`
+	MAC       string `json:"mac"`
+	Type      string `json:"type"`
+	Broadcast string `json:"broadcast,omitempty"`
 }
 
 func discoveryNetwork(cidr string) (*net.IPNet, error) {
-	ip, n, err := net.ParseCIDR(cidr)
-	if err != nil || ip.To4() == nil {
-		return nil, errors.New("Ein IPv4-Netz als CIDR eingeben, z. B. 192.168.1.0/24.")
-	}
-	bits, _ := n.Mask.Size()
-	if bits < 24 || bits > 30 {
-		return nil, errors.New("Suche auf /24 bis /30 begrenzt (höchstens 254 Geräte).")
-	}
-	end := append(net.IP(nil), n.IP...)
-	for i := range end {
-		end[i] |= ^n.Mask[i]
-	}
-	if privateIPv4(n.IP.String()) == nil || privateIPv4(end.String()) == nil {
-		return nil, errors.New("Nur private LAN-Netze können durchsucht werden.")
-	}
-	interfaces, err := net.Interfaces()
+	networks, err := localNetworks()
 	if err != nil {
 		return nil, err
 	}
-	local := false
-	for _, it := range interfaces {
-		addrs, _ := it.Addrs()
-		for _, a := range addrs {
-			host, _, _ := net.ParseCIDR(a.String())
-			if host != nil && n.Contains(host) {
-				local = true
-			}
-		}
-	}
-	if !local {
-		return nil, errors.New("Das Suchnetz muss an einer lokalen NAS-Netzwerkschnittstelle liegen.")
-	}
-	return n, nil
+	return discoveryNetworkFor(cidr, networks)
 }
 func discover(cidr string) ([]FoundDevice, []string, error) {
-	network, err := discoveryNetwork(cidr)
+	local, err := localNetworks()
 	if err != nil {
 		return nil, nil, err
+	}
+	network, err := discoveryNetworkFor(cidr, local)
+	if err != nil {
+		return nil, nil, err
+	}
+	broadcast := ""
+	for _, attached := range local {
+		_, subnet, err := net.ParseCIDR(attached.CIDR)
+		if err == nil && subnet.Contains(network.IP) && subnet.Contains(networkEnd(network)) {
+			broadcast = attached.Broadcast
+			break
+		}
 	}
 	jobs := make(chan string)
 	var wg sync.WaitGroup
@@ -180,7 +165,7 @@ func discover(cidr string) ([]FoundDevice, []string, error) {
 				name = strings.TrimSuffix(names[0], ".")
 			}
 			mu.Lock()
-			results = append(results, FoundDevice{name, ip, mac, "LAN-Gerät"})
+			results = append(results, FoundDevice{Name: name, IP: ip, MAC: mac, Type: "LAN-Gerät", Broadcast: broadcast})
 			mu.Unlock()
 		}()
 	}

@@ -59,7 +59,8 @@
   </form></dialog>
   <dialog id="discover-dialog" class="wide-dialog"><div class="dialog-heading"><div><span class="eyebrow">LOKALES NETZWERK</span><h2>Geräte entdecken</h2></div><button type="button" class="icon-button close-dialog" aria-label="Schließen">×</button></div>
     <p class="dialog-copy">Erreichbare Geräte im IPv4-Netz suchen. Schlafende Geräte können meist nicht gefunden werden.</p>
-    <form id="discover-form" class="scan-form"><label class="field">Netzwerk (CIDR)<input name="cidr" required autocomplete="off" value="192.168.1.0/24" placeholder="192.168.1.0/24"></label><button type="submit" class="button primary">Suche starten</button></form>
+    <label id="discover-network-field" class="field" hidden>Erkanntes NAS-Netz<select id="discover-network"></select></label>
+    <form id="discover-form" class="scan-form"><label class="field">Suchbereich (CIDR)<input name="cidr" required autocomplete="off" placeholder="Netzadresse/Präfix"></label><button type="submit" class="button primary">Suche starten</button></form>
     <div id="discover-warnings"></div><p id="discover-progress" class="muted" role="status"></p><div id="discover-results" class="discover-results"></div>
     <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Schließen</button><button type="button" id="discover-import" class="button primary" disabled>Auswahl übernehmen</button></div>
   </dialog>

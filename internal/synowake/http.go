@@ -164,6 +164,20 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		switch action {
 		case "state":
+			networks, networkErr := localNetworks()
+			if a.Demo {
+				demoNetwork, _ := parseLocalNetwork("Demo-LAN", "192.168.1.2/24")
+				networks, networkErr = []LocalNetwork{demoNetwork}, nil
+			}
+			host := r.Host
+			if address, _, err := net.SplitHostPort(host); err == nil {
+				host = address
+			}
+			networks = preferredLocalNetworks(networks, metadataFor(r).ServerAddress, host)
+			networkError := ""
+			if networkErr != nil {
+				networkError = "NAS-Netzwerke konnten nicht ermittelt werden: " + networkErr.Error()
+			}
 			plans := []scheduleView{}
 			for _, p := range s.Schedules {
 				pending := false
@@ -178,7 +192,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			for _, p := range s.Pending {
 				pendingPlans = append(pendingPlans, scheduleView{p.Schedule, commandFor(p), true})
 			}
-			writeJSON(w, 200, map[string]any{"user": user, "version": PackageVersion, "csrf": csrfFor(s, user, r), "devices": s.Devices, "schedules": plans, "pendingSchedules": pendingPlans, "logs": s.Logs, "diagnostics": s.Diagnostics, "active": s.Active, "settings": map[string]int{"logCenterPort": s.LogCenterPort}}, nil)
+			writeJSON(w, 200, map[string]any{"user": user, "version": PackageVersion, "csrf": csrfFor(s, user, r), "devices": s.Devices, "networks": networks, "networkError": networkError, "schedules": plans, "pendingSchedules": pendingPlans, "logs": s.Logs, "diagnostics": s.Diagnostics, "active": s.Active, "settings": map[string]int{"logCenterPort": s.LogCenterPort}}, nil)
 		case "status":
 			a.statusHTTP(w, s)
 		default:
@@ -294,7 +308,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = decodeBody(r, &input)
 		if err == nil {
 			if a.Demo {
-				data = map[string]any{"devices": []FoundDevice{{"Arbeitszimmer-PC", "192.168.1.20", "00:11:22:33:44:55", "LAN-Gerät"}}, "warnings": []string{"Demo-Suche"}}
+				data = map[string]any{"devices": []FoundDevice{{Name: "Arbeitszimmer-PC", IP: "192.168.1.20", MAC: "00:11:22:33:44:55", Type: "LAN-Gerät", Broadcast: "192.168.1.255"}}, "warnings": []string{"Demo-Suche"}}
 			} else {
 				var found []FoundDevice
 				var warnings []string

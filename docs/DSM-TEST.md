@@ -12,7 +12,10 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Zugriff als normaler DSM-Benutzer | Backend verweigert die Administrationsfunktionen. |
 | Gerät mit Name, IP und MAC speichern | Zeile und Kachel erscheinen; Name lässt sich ändern. |
 | Falsche IP oder MAC eingeben | Sichtbare Validierungsfehlermeldung; kein Wake-Paket. |
-| Lokales `/24` suchen | Erreichbare LAN-Nachbarn mit MAC erscheinen; Treffer lassen sich übernehmen. |
+| Suchdialog ohne vorhandene Geräte öffnen | Suchbereich wird aus dem aktiven NAS-Netz vorgeschlagen; kein festes `192.168.1.0/24`. |
+| Mehrere aktive Schnittstellen prüfen | NAS-IP, Schnittstelle und echtes Netz sind auswählbar; nicht aktive, Loopback- und `169.254.*`-Schnittstellen fehlen. |
+| Lokales `/24` suchen, auch `192.167.178.0/24` | Erreichbare LAN-Nachbarn mit MAC erscheinen; Treffer samt lokalem Broadcast lassen sich übernehmen und speichern. |
+| Tatsächliches `/25` bis `/30` prüfen | Suchvorschlag behält die Netzmaske; über das angeschlossene Netz hinausgehende Bereiche werden abgewiesen. |
 | Einzelgerät und Schnellauswahl starten | Magic Packet erreicht den Testrechner; Status wechselt von „Wird aufgeweckt“ nach „Online“, wenn ICMP beantwortet wird. |
 | Onlineprüfung mit gesperrtem ICMP | Gerät wird nicht als nachweislich online angezeigt; Einschränkung ist nachvollziehbar. |
 | Zeitplan für die nächste Minute speichern | Im DSM-Aufgabenplaner existiert genau eine zugehörige SynoWake-Aufgabe. |

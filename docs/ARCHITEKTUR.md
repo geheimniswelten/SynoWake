@@ -25,6 +25,14 @@ DSM stellt die Dateien über `dsmuidir="ui"` unter `/webman/3rdparty/SynoWake/` 
 
 Die private Datenablage liegt im DSM-Paketverzeichnis `var`, außerhalb des UI-Verzeichnisses. Speichern verwendet eine Dateisperre und atomaren Austausch, damit parallele Dienstanfragen und Lebenszyklusbefehle denselben Datenbestand bearbeiten können. Der Zustand für angemeldete Administratoren enthält den Aufgabenbefehl mit dem jeweiligen Zeitplan-Schlüssel, damit die Anwendung ihre DSM-Aufgabe eindeutig prüfen und eine unterbrochene Registrierung wiederaufnehmen kann. Der Schlüssel erscheint auch im DSM-Aufgabenskript. Es gibt kein zusätzliches Geheimnisfeld im Oberflächenzustand; die Anwendung zeigt Schlüssel nicht im DOM an und schreibt sie nicht in das Ausführungsprotokoll.
 
+## Lokale Netzwerke
+
+Der Backend-Zustand enthält aktive IPv4-Schnittstellen mit NAS-Adresse, CIDR, begrenztem Suchvorschlag und Broadcast-Adresse. Loopback und IPv4-Link-Local werden ausgefiltert. Der ursprüngliche Serverkontext der DSM-CGI priorisiert die Schnittstelle, über die DSM erreicht wird; die Hostadresse dient als Ersatz. Der Suchdialog lädt diese Liste beim Öffnen neu und bietet die Schnittstellen zur Auswahl an.
+
+Ein Suchnetz muss vollständig in einem angeschlossenen Schnittstellennetz liegen. Die Adressklasse allein entscheidet nicht über die Zulässigkeit: Ein lokal verwendetes `192.167.178.0/24` ist zulässig, ein nicht angeschlossenes `192.168.1.0/24` bleibt unzulässig. Größere Netze werden für den Suchvorschlag auf den `/24`-Bereich mit der NAS-Adresse begrenzt; `/25` bis `/30` bleiben unverändert. Die Validierung verwendet Netzanfang und Netzende, damit ein Suchbereich keine enger konfigurierte Netzmaske überschreitet.
+
+Die Gerätevalidierung akzeptiert private IPv4-Adressen und zusätzliche direkt angeschlossene IPv4-Hostadressen. Für zusätzliche Broadcast-Ziele muss die Adresse mit dem Broadcast einer aktiven NAS-Schnittstelle übereinstimmen. Die Gerätesuche liefert diesen Broadcast zusammen mit IP und MAC, und die Oberfläche übernimmt ihn beim Speichern. Der allgemein gültige lokale Broadcast `255.255.255.255` bleibt verfügbar.
+
 ## Aufgabenplaner
 
 Die administrativ angemeldete Browseroberfläche verwendet `SYNO.Core.TaskScheduler` über den WebAPI-Endpunkt der vorhandenen DSM-Sitzung. DSM übernimmt Registrierung, Aktivierung und Zeitsteuerung. Das Paket installiert weder statische Aufgaben über `task_config.xml` noch direkten Inhalt in `/etc/crontab`.
