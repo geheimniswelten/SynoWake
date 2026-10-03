@@ -1,6 +1,11 @@
-# SynoWake
+[Deutsch](README.md) · English · [GitHub](https://geheimniswelten.github.io/#synowake)
 
-[Deutsch](README.md) · English
+### Short
+
+- Install the [.spk](https://github.com/geheimniswelten/SynoWake/releases) "manually" via Package Center
+- and from now on, wake up devices directly from within DSM :)
+
+# SynoWake
 
 Wake-on-LAN application for a Synology **DS918+ running DSM 7.1**. The internal package ID is `h5uSynoWake`; the DisplayName and visible DSM application name remain **SynoWake**.
 
