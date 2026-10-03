@@ -18,6 +18,7 @@ type Device struct {
 	MAC       string    `json:"mac"`
 	Broadcast string    `json:"broadcast"`
 	Port      int       `json:"port"`
+	Favorite  bool      `json:"favorite"`
 	LastWake  time.Time `json:"lastWake,omitempty"`
 	WakeState string    `json:"wakeState,omitempty"`
 }
@@ -68,6 +69,7 @@ type Store struct {
 	Logs          []Log           `json:"logs"`
 	Diagnostics   []Diagnostic    `json:"diagnostics"`
 	LogCenterPort int             `json:"logCenterPort"`
+	DiscoveryCIDR string          `json:"discoveryCidr,omitempty"`
 }
 
 var safeID = regexp.MustCompile(`^[a-f0-9]{32}$`)

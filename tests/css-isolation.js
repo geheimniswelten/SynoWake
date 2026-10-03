@@ -30,7 +30,7 @@ function rulesIn(rules, verifyScope = false) {
   return count;
 }
 async function run() {
-  await until(() => frame.contentDocument?.querySelectorAll('.device-card').length === 4);
+  await until(() => frame.contentDocument?.querySelectorAll('.device-card').length === 2);
   const baseline = outsideSnapshot();
   const legacy = await loadStyle('/legacy.css');
   const legacyRules = rulesIn(legacy.sheet.cssRules);
@@ -40,7 +40,7 @@ async function run() {
   const fixed = await loadStyle('/ui/assets/synowake.css');
   check(outsideSnapshot() === baseline, 'Neue CSS verändert außerhalb von SynoWake weder Stile noch Abmessungen.');
   const fixedRules = rulesIn(fixed.sheet.cssRules, true);
-  check(fixedRules === legacyRules && fixedRules > 150, `${fixedRules} gültige CSS-Regeln, alle auf SynoWake begrenzt.`);
+  check(fixedRules >= legacyRules && fixedRules > 150, `${fixedRules} gültige CSS-Regeln, alle auf SynoWake begrenzt.`);
   const app = frame.contentDocument;
   check(app.body.id === 'synowake-app' && !document.getElementById('synowake-app'), 'Der CSS-Bereich existiert ausschließlich im iframe.');
   check(app.defaultView.getComputedStyle(app.querySelector('.device-grid')).display === 'grid', 'Die SynoWake-Oberfläche bleibt vollständig gestaltet.');

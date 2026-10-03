@@ -1,11 +1,13 @@
-import {DsmScheduler, getSynoToken} from './scheduler.js';
+import {DsmScheduler, getSynoToken} from './scheduler.js?v=0.1.5-0006';
 
 const $ = selector => document.querySelector(selector);
+const uiVersion = '0.1.5-0006';
 const demo = new URLSearchParams(location.search).get('demo') === '1';
 const scheduler = new DsmScheduler();
 const selected = new Set();
 const pendingCommits = new Map();
 const busyDevices = new Set();
+const busyFavorites = new Set();
 const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 let state = {devices: [], schedules: [], logs: [], diagnostics: []};
 let dsmToken = '';
@@ -79,7 +81,7 @@ async function refreshState() {
     if (device.wakeState === 'waking' && Date.now() - new Date(device.lastWake).getTime() < 90000) device.status = 'waking';
   }
   state = {...state, ...data, devices: data.devices || [], schedules: data.schedules || [], logs: data.logs || [], diagnostics: data.diagnostics || []};
-  for (const id of selected) if (!state.devices.some(device => device.id === id)) selected.delete(id);
+  for (const id of selected) if (!favoriteDevices().some(device => device.id === id)) selected.delete(id);
   render();
   connected(true, demo ? 'Lokale Vorschau · Beispieldaten' : undefined);
 }
@@ -93,6 +95,7 @@ function statusBadge(status) {
 }
 
 function deviceStatus(device) { return busyDevices.has(device.id) ? 'waking' : device.status || 'unknown'; }
+function favoriteDevices() { return state.devices.filter(device => device.favorite === true); }
 
 function render() {
   renderDiagnostics();
@@ -112,6 +115,7 @@ function renderDiagnostics() {
   const container = $('#diagnostics');
   container.replaceChildren();
   if (demo) container.append(element('div', 'notice info', 'DEMO · Diese Vorschau verwendet Beispieldaten. Aufwecken und Automatiken werden nur im Browser simuliert.'));
+  if (state.version && state.version !== uiVersion) container.append(element('div', 'notice warning', `Oberfläche ${uiVersion}, Paketdienst ${state.version}: Bitte das Paket aktualisieren bzw. neu starten und DSM vollständig neu laden.`));
   if (state.active === false) container.append(element('div', 'notice warning', 'Das SynoWake-Paket ist angehalten. Bitte im DSM-Paketzentrum starten, bevor Geräte aufgeweckt oder Automatiken ausgeführt werden.'));
   for (const item of state.diagnostics.filter(value => typeof value === 'string' || value.level !== 'info').slice(0, 4)) {
     container.append(element('div', `notice ${item.level === 'error' ? 'error' : 'warning'}`, typeof item === 'string' ? item : item.message));
@@ -145,7 +149,7 @@ function renderDiagnostics() {
 
 function renderSummary() {
   const counts = {online: 0, offline: 0, waking: 0};
-  for (const device of state.devices) if (deviceStatus(device) in counts) counts[deviceStatus(device)]++;
+  for (const device of favoriteDevices()) if (deviceStatus(device) in counts) counts[deviceStatus(device)]++;
   const container = $('#summary');
   container.replaceChildren();
   for (const [status, label] of [['online', 'online'], ['offline', 'offline'], ['waking', 'wird aufgeweckt']]) {
@@ -168,7 +172,9 @@ function renderTiles() {
   const container = $('#device-tiles');
   container.replaceChildren();
   if (!state.devices.length) { empty(container, 'Das erste Gerät wartet.', 'Hinterlege Name, IP und MAC oder suche im lokalen Netzwerk.', 'Gerät hinzufügen', () => openDevice()); return; }
-  for (const device of state.devices) {
+  const favorites = favoriteDevices();
+  if (!favorites.length) { empty(container, 'Welche Geräte möchtest du schnell aufwecken?', 'Markiere in der Geräteliste deine Favoriten. Nur diese erscheinen hier als Kacheln.', 'Favoriten auswählen', () => $('[data-tab=devices]').click()); return; }
+  for (const device of favorites) {
     const card = element('article', `device-card${selected.has(device.id) ? ' selected' : ''}`);
     const top = element('div', 'card-top');
     top.append(element('span', 'device-icon', /server|nas/i.test(device.name) ? '▥' : '▣'));
@@ -193,11 +199,12 @@ function renderTiles() {
 
 function updateSelection() {
   const count = selected.size;
+  const total = favoriteDevices().length;
   $('#selection-count').textContent = count ? `${count} ausgewählt` : '';
   $('#wake-selected').disabled = !count || [...selected].every(id => busyDevices.has(id) || state.devices.find(device => device.id === id)?.status === 'waking');
-  $('#select-all').checked = count > 0 && count === state.devices.length;
-  $('#select-all').indeterminate = count > 0 && count < state.devices.length;
-  $('#select-all').disabled = !state.devices.length;
+  $('#select-all').checked = count > 0 && count === total;
+  $('#select-all').indeterminate = count > 0 && count < total;
+  $('#select-all').disabled = !total;
 }
 
 function renderDevices() {
@@ -206,10 +213,24 @@ function renderDevices() {
   $('#device-count').textContent = `${devices.length} ${devices.length === 1 ? 'Gerät' : 'Geräte'}`;
   const tbody = $('#device-rows'); tbody.replaceChildren();
   if (!devices.length) {
-    const row = element('tr'); const cell = element('td', 'muted', query ? 'Keine passenden Geräte gefunden.' : 'Noch keine Geräte hinterlegt.'); cell.colSpan = 5; row.append(cell); tbody.append(row); return;
+    const row = element('tr'); const cell = element('td', 'muted', query ? 'Keine passenden Geräte gefunden.' : 'Noch keine Geräte hinterlegt.'); cell.colSpan = 6; row.append(cell); tbody.append(row); return;
   }
   for (const device of devices) {
     const row = element('tr');
+    const favorite = element('input'); favorite.type = 'checkbox'; favorite.checked = device.favorite === true;
+    favorite.disabled = busyFavorites.has(device.id);
+    favorite.title = 'Als Kachel in Übersicht anzeigen';
+    favorite.setAttribute('aria-label', `${device.name}: Als Kachel in Übersicht anzeigen`);
+    favorite.addEventListener('change', async () => {
+      const value = favorite.checked;
+      busyFavorites.add(device.id); favorite.disabled = true;
+      try {
+        await api('device-favorite', {id: device.id, favorite: value});
+        await refreshState();
+      } catch (error) { favorite.checked = device.favorite === true; toast(error.message, true); }
+      finally { busyFavorites.delete(device.id); renderDevices(); }
+    });
+    const favoriteCell = element('td'); favoriteCell.append(favorite); row.append(favoriteCell);
     row.append(element('td', 'device-name', device.name), element('td', 'monospace', device.ip), element('td', 'monospace', device.mac));
     const status = element('td'); status.append(statusBadge(deviceStatus(device))); row.append(status);
     const actions = element('td'); const group = element('div', 'row-actions');
@@ -299,6 +320,7 @@ function openDevice(device = {}) {
   $('#device-dialog-title').textContent = device.id ? 'Gerät bearbeiten' : 'Gerät hinzufügen';
   for (const name of ['id', 'name', 'ip', 'mac', 'broadcast']) setField(form, name, device[name]);
   setField(form, 'port', device.port || 9);
+  form.elements.namedItem('favorite').checked = device.favorite === true;
   $('#device-dialog').showModal();
 }
 
@@ -306,6 +328,7 @@ function validIp(ip) { return /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && ip.split('.'
 
 function devicePayload(form) {
   const data = Object.fromEntries(new FormData(form));
+  data.favorite = form.elements.namedItem('favorite').checked;
   for (const field of ['name', 'ip', 'mac', 'broadcast']) data[field] = String(data[field] || '').trim();
   data.mac = data.mac.replace(/-/g, ':').toUpperCase(); data.port = Number(data.port);
   if (!data.name || !validIp(data.ip)) throw new Error('Bitte einen Namen und eine gültige IPv4-Adresse eingeben.');
@@ -390,8 +413,11 @@ async function openDiscover() {
     option.value = network.searchCidr; select.append(option);
   }
   $('#discover-network-field').hidden = !networks.length;
-  const preferred = networks.find(network => network.searchCidr === lastDiscoveryNetwork) || networks[0];
-  select.value = preferred?.searchCidr || '';
+  if (state.discoveryCidr && !networks.some(network => network.searchCidr === state.discoveryCidr)) {
+    const option = element('option', '', `Letzter Suchbereich · ${state.discoveryCidr}`);
+    option.value = state.discoveryCidr; select.append(option);
+  }
+  select.value = [...select.options].some(option => option.value === lastDiscoveryNetwork) ? lastDiscoveryNetwork : state.discoveryCidr || networks[0]?.searchCidr || '';
   $('#discover-form').elements.namedItem('cidr').value = select.value;
   clearDiscovery();
   if (state.networkError) $('#discover-warnings').append(element('div', 'notice error', state.networkError));
@@ -408,16 +434,20 @@ function renderDiscovery() {
   const target = $('#discover-results'); target.replaceChildren();
   for (const [index, device] of scanResults.entries()) {
     const row = element('div', 'discover-row');
-    const check = element('input'); check.type = 'checkbox'; check.dataset.index = index; check.checked = !state.devices.some(existing => existing.mac.toUpperCase() === device.mac?.toUpperCase()); check.disabled = !device.mac;
+    const check = element('input'); check.type = 'checkbox'; check.dataset.index = index; check.checked = false; check.disabled = !device.mac;
     check.setAttribute('aria-label', `${device.ip} übernehmen`); check.addEventListener('change', updateImportButton);
-    const label = element('label', 'field', 'Name (änderbar)');
-    const name = element('input'); name.type = 'text'; name.value = device.name || device.type || device.ip; name.maxLength = 80; name.dataset.index = index;
+    const label = element('label', 'field', 'Name');
+    const name = element('input'); name.type = 'text'; name.value = discoveryName(device.name) || device.type || device.ip; name.maxLength = 80; name.dataset.index = index;
     label.append(name);
     const address = element('div', 'discover-address'); address.append(element('span', '', device.ip), element('span', 'monospace', device.mac || 'Keine MAC ermittelt'));
     if (device.type) address.append(element('span', 'discover-type', device.type));
     row.append(check, label, address); target.append(row);
   }
   updateImportButton();
+}
+
+function discoveryName(name = '') {
+  return String(name).trim().replace(/\.$/, '').replace(/\.(fritz\.box|local|lan)$/i, '');
 }
 
 function updateImportButton() {
@@ -455,7 +485,7 @@ $('#discover-network').addEventListener('change', event => {
 $('#discover-form').elements.namedItem('cidr').addEventListener('input', clearDiscovery);
 $('#schedule-add').addEventListener('click', () => openSchedule());
 $('#device-search').addEventListener('input', renderDevices);
-$('#select-all').addEventListener('change', event => { selected.clear(); if (event.target.checked) state.devices.forEach(device => selected.add(device.id)); renderTiles(); updateSelection(); });
+$('#select-all').addEventListener('change', event => { selected.clear(); if (event.target.checked) favoriteDevices().forEach(device => selected.add(device.id)); renderTiles(); updateSelection(); });
 $('#wake-selected').addEventListener('click', () => wakeDevices([...selected]));
 $('#refresh-logs').addEventListener('click', async event => { const submit = event.currentTarget; submit.disabled = true; try { await refreshState(); } catch (error) { toast(error.message, true); } finally { submit.disabled = false; } });
 $('#settings-form').addEventListener('submit', async event => {
@@ -499,7 +529,7 @@ $('#discover-form').addEventListener('submit', async event => {
   try {
     const cidr = form.elements.namedItem('cidr').value.trim();
     if (!/^\d{1,3}(\.\d{1,3}){3}\/(\d|[12]\d|3[0-2])$/.test(cidr)) throw new Error('Bitte ein gültiges IPv4-Netz mit Präfix eingeben, zum Beispiel 192.168.1.0/24.');
-    const data = await api('discover', {cidr}); scanResults = data.devices || []; renderDiscovery();
+    const data = await api('discover', {cidr}); lastDiscoveryNetwork = cidr; scanResults = data.devices || []; renderDiscovery();
     for (const warning of data.warnings || []) $('#discover-warnings').append(element('div', 'notice warning', warning.message || warning));
     $('#discover-progress').textContent = scanResults.length ? `${scanResults.length} ${scanResults.length === 1 ? 'Gerät gefunden' : 'Geräte gefunden'}. Namen vor der Übernahme anpassen.` : 'Keine Geräte gefunden. Netzbereich und Erreichbarkeit prüfen.';
   } catch (error) { $('#discover-warnings').append(element('div', 'notice error', error.message)); $('#discover-progress').textContent = ''; }
@@ -511,8 +541,8 @@ $('#discover-import').addEventListener('click', async event => {
   try {
     for (const check of $('#discover-results').querySelectorAll('input[type=checkbox]:checked:not(:disabled)')) {
       const index = Number(check.dataset.index); const device = scanResults[index];
-      const name = $('#discover-results').querySelector(`input[type=text][data-index="${index}"]`).value.trim() || device.name || device.type || device.ip;
-      await api('device-save', {name, ip: device.ip, mac: device.mac, broadcast: device.broadcast || '', port: 9}); count++; check.checked = false;
+      const name = $('#discover-results').querySelector(`input[type=text][data-index="${index}"]`).value.trim() || discoveryName(device.name) || device.type || device.ip;
+      await api('device-save', {name, ip: device.ip, mac: device.mac, broadcast: device.broadcast || '', port: 9, favorite: false}); count++; check.checked = false;
     }
     await refreshState(); $('#discover-dialog').close(); toast(`${count} ${count === 1 ? 'Gerät übernommen' : 'Geräte übernommen'}.`);
   } catch (error) { $('#discover-warnings').append(element('div', 'notice error', `${count ? `${count} Gerät(e) bereits übernommen. ` : ''}${error.message}`)); await refreshState().catch(() => {}); }
@@ -520,11 +550,11 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.4', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '0.1.5-0006', diagnostics: [], settings: {logCenterPort: 0}, active: true,
   networks: [{interface: 'Demo-LAN', ip: '192.168.1.2', cidr: '192.168.1.0/24', searchCidr: '192.168.1.0/24', broadcast: '192.168.1.255'}],
   devices: [
-    {id: 'demo1', name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, status: 'offline'},
-    {id: 'demo2', name: 'Medien-PC', ip: '192.168.1.32', mac: 'A0:B1:C2:D3:E4:02', broadcast: '192.168.1.255', port: 9, status: 'online'},
+    {id: 'demo1', name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true, status: 'offline'},
+    {id: 'demo2', name: 'Medien-PC', ip: '192.168.1.32', mac: 'A0:B1:C2:D3:E4:02', broadcast: '192.168.1.255', port: 9, favorite: true, status: 'online'},
     {id: 'demo3', name: 'Backup-Server', ip: '192.168.1.45', mac: 'A0:B1:C2:D3:E4:03', broadcast: '192.168.1.255', port: 9, status: 'offline'},
     {id: 'demo4', name: 'Studio', ip: '192.168.1.60', mac: 'A0:B1:C2:D3:E4:04', broadcast: '192.168.1.255', port: 9, status: 'offline'}
   ],
@@ -549,6 +579,11 @@ async function demoApi(action, payload = {}) {
       const device = {...payload, id: payload.id || `demo-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`, status: demoState.devices.find(device => device.id === payload.id)?.status || 'offline'};
       const index = demoState.devices.findIndex(item => item.id === device.id); index < 0 ? demoState.devices.push(device) : demoState.devices.splice(index, 1, device); return {device};
     }
+    case 'device-favorite': {
+      const device = demoState.devices.find(device => device.id === payload.id);
+      if (!device) throw new Error('Gerät nicht gefunden.');
+      device.favorite = payload.favorite; return device;
+    }
     case 'device-delete': demoState.devices = demoState.devices.filter(device => device.id !== payload.id); return {};
     case 'wake':
       for (const id of payload.ids) {
@@ -558,7 +593,7 @@ async function demoApi(action, payload = {}) {
         setTimeout(() => { device.status = 'online'; pollStatus(); }, 5500);
       }
       return {};
-    case 'discover': return {devices: [{name: 'Wohnzimmer-PC', ip: '192.168.1.70', mac: 'A0:B1:C2:D3:E4:05', type: 'Computer'}, {name: '', ip: '192.168.1.80', mac: 'A0:B1:C2:D3:E4:06', type: 'Netzwerkgerät'}], warnings: []};
+    case 'discover': demoState.discoveryCidr = payload.cidr; return {devices: [{name: 'Wohnzimmer-PC.fritz.box', ip: '192.168.1.70', mac: 'A0:B1:C2:D3:E4:05', type: 'Computer'}, {name: '', ip: '192.168.1.80', mac: 'A0:B1:C2:D3:E4:06', type: 'Netzwerkgerät'}], warnings: []};
     case 'schedule-prepare': {
       const schedule = {...payload, id: payload.id || `demo-schedule-${Date.now()}`}; demoPrepared.set(schedule.id, schedule); return {schedule, command: 'DEMO', owner: demoState.user};
     }

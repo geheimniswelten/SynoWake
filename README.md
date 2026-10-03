@@ -4,7 +4,9 @@ Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Der Paketname u
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
-**Version 0.1.4-0005: Styles vom DSM-Desktop getrennt, Beta mit Zielsystemprüfung.** Die Oberfläche verwendet ausschließlich `ui/assets/synowake.css` innerhalb ihres iframe. Alle CSS-Selektoren sind auf `#synowake-app` begrenzt; eine globale `ui/style.css` wird nicht mehr ausgeliefert. Dadurch sollen Paket-Zentrum, Widgets und andere DSM-Anwendungen beim Aktivieren von SynoWake unverändert bleiben. Nach dem Update DSM neu laden, damit eventuell bereits geladene alte CSS-Regeln verschwinden. Der Builder weist die alte globale CSS-Datei ab. Die Korrektur wird mit einem Browser-Test für unveränderte Stile und Abmessungen außerhalb von SynoWake geprüft; die tatsächliche DSM-Integration bleibt auf der NAS zu bestätigen.
+**Version 0.1.5-0006: Favoriten und gezielte Geräteübernahme, Beta mit Zielsystemprüfung.** In der Geräteliste legt ein Favoriten-Häkchen fest, welche Geräte als Kacheln in der Übersicht erscheinen. Neue und bereits vorhandene Geräte ohne gespeicherte Favoriten-Auswahl beginnen ohne Häkchen. Suchtreffer sind zunächst abgewählt. Die Suche merkt sich den zuletzt erfolgreich verwendeten Bereich und schlägt sonst das aktive NAS-Netz vor. Bekannte lokale DNS-Endungen werden aus vorgeschlagenen Namen entfernt; das Feld heißt „Name“. Die Oberflächendateien werden mit Paketversion geladen, damit ein Update keine alten Suchvorgaben aus dem Browsercache übernimmt. Nach dem Update DSM vollständig neu laden.
+
+Die Oberfläche verwendet weiterhin ausschließlich `ui/assets/synowake.css` innerhalb ihres iframe. Alle CSS-Selektoren sind auf `#synowake-app` begrenzt. Der Builder weist eine globale `ui/style.css` ab. Ein Browser-Test prüft unveränderte Stile und Abmessungen außerhalb von SynoWake; die tatsächliche DSM-Integration bleibt auf der NAS zu bestätigen.
 
 Die Suche verwendet aktive NAS-Schnittstellen und deren Netzmasken. Auch direkt angeschlossene Netze außerhalb der privaten IPv4-Bereiche werden unterstützt. Der Paketdienst verwendet ausschließlich das Paketkonto. Die CGI-Weiterleitung benötigt keine erhöhten Ausführungsrechte. Das Paket fordert keine DSM-Ressourcen an; Desktop-Benachrichtigungen verwenden App-Sprachtexte. Netzwerkverkehr, Aufgabenplaner, Protokoll-Center und Benachrichtigungen müssen auf der tatsächlichen NAS bestätigt werden.
 
@@ -26,6 +28,8 @@ Der Builder prüft das ELF-Ziel Linux/amd64 und lehnt dynamisch gelinkte Program
 
 CSS-Regression prüfen: `node scripts/test-ui.mjs` starten und die ausgegebene lokale Adresse in Firefox öffnen. Der Test reproduziert die Änderung am äußeren Dokument mit der alten CSS, prüft die neue Begrenzung, Dialoge und vier Fensterbreiten. Die alte CSS liegt ausschließlich unter `tests/fixtures` und wird nicht ins SPK aufgenommen.
 
+Den gesamten Oberflächenablauf einschließlich Favoriten, Geräteübernahme und simulierten DSM-WebAPI-Antworten prüft `node tests/workflow.cjs` mit Playwright. `PLAYWRIGHT_MODULE` kann den Pfad zur installierten Playwright-Bibliothek und `BROWSER_EXECUTABLE` den Pfad zu Chromium oder Edge vorgeben. Screenshots und CSS-Prüfergebnis werden unter `work/` gespeichert. Backend-Tests: `go test ./...`.
+
 Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` eingestellt. Es ist nicht signiert und wird als Beta gekennzeichnet.
 
 ## Installation und erste Verwendung
@@ -35,7 +39,7 @@ Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` ei
 3. Paket starten und **SynoWake** über das Hauptmenü oder die Schaltfläche **Öffnen** aufrufen.
 4. Im Tab **Geräte** ein Gerät mit Name, IPv4-LAN-Adresse und MAC-Adresse anlegen. Private Adressen sowie Adressen aus direkt angeschlossenen NAS-Netzen werden akzeptiert. Der Name bleibt bearbeitbar. Broadcast-Adresse und UDP-Port können bei Bedarf angepasst werden.
 5. Wake-on-LAN im BIOS/UEFI, Betriebssystem und Netzwerktreiber des Zielgeräts aktivieren. Zunächst im gleichen kabelgebundenen LAN testen.
-6. Auf der Startseite auf eine Gerätekachel klicken oder mehrere Geräte über die Schnellauswahl aufwecken.
+6. In der Geräteliste die gewünschten Geräte als **Favorit** markieren oder beim Bearbeiten **Als Kachel in Übersicht anzeigen** aktivieren. Auf der Startseite eine dieser Kacheln oder die Schnellauswahl verwenden. Alle Geräte bleiben unabhängig vom Favoritenstatus in der Liste und für Automatiken verfügbar.
 7. Im Tab **Automatik** Gerät, Uhrzeit, Wochentage und optional DSM-Benachrichtigungen wählen. Die Uhrzeit folgt der Zeitzone der NAS.
 
 Wenn das DSM-Anwendungsfenster auf der konkreten Firmware nicht lädt, die Oberfläche nach DSM-Anmeldung direkt unter `https://NAS:DSM-Port/webman/3rdparty/SynoWake/index.html` öffnen. Für einen eigenen HTTPS-Port dessen Wert einsetzen. Das ist zugleich ein Diagnoseweg für die Fensterintegration.
@@ -46,9 +50,11 @@ Wenn das DSM-Anwendungsfenster auf der konkreten Firmware nicht lädt, die Oberf
 
 Beim Öffnen der Suche ermittelt SynoWake die aktiven IPv4-Netze der NAS und füllt den Suchbereich automatisch aus. Mehrere Schnittstellen sind auswählbar. Bevorzugt wird die Schnittstelle, über deren Adresse die DSM-Anfrage eingeht. Ein festes `192.168.1.0/24` oder die Adresse des ersten gespeicherten Geräts wird nicht als Standard verwendet. Loopback, nicht aktive Schnittstellen und `169.254.*` werden nicht angeboten.
 
+Nach einer erfolgreichen Suche wird der verwendete Bereich in den Paketdaten gespeichert und beim nächsten Öffnen wieder vorgeschlagen, auch nach einem Browser- oder Paketneustart. Liegt er inzwischen nicht mehr in einem aktiven NAS-Netz, wird stattdessen ein aktuelles Netz angeboten. Bei fehlender Netzwerkerkennung bleibt das Feld leer. Unterschiedliche Versionsstände von Oberfläche und Paketdienst erzeugen eine sichtbare Meldung.
+
 Die Suche akzeptiert `/24` bis `/30`, vollständig innerhalb eines angeschlossenen Schnittstellennetzes. Direkt angeschlossene Netze wie `192.167.178.0/24` werden ebenfalls akzeptiert. Kleinere Teilnetze behalten die echte Netzmaske; bei größeren Netzen wird zunächst der `/24`-Bereich mit der NAS-Adresse vorgeschlagen. Weitere passende Teilbereiche lassen sich eingeben. Die Begrenzung liegt bei 254 Hostadressen pro Suche.
 
-Die Suche prüft Hosts und liest Nachbartabellen. IP, MAC und die Broadcast-Adresse der zugehörigen NAS-Schnittstelle lassen sich aus Treffern übernehmen. Damit funktioniert auch das Speichern eines Geräts aus einem angeschlossenen Netz außerhalb der privaten IPv4-Bereiche. Wenn Reverse-DNS einen Namen liefert, wird dieser vorgeschlagen; sonst erscheint ein allgemeiner LAN-Gerätetyp. Namen können jederzeit angepasst werden.
+Die Suche prüft Hosts und liest Nachbartabellen. IP, MAC und die Broadcast-Adresse der zugehörigen NAS-Schnittstelle lassen sich aus ausgewählten Treffern übernehmen. Zu Beginn ist kein Treffer angehakt. Übernommene Geräte sind zunächst keine Favoriten. Wenn Reverse-DNS einen Namen liefert, werden `.fritz.box`, `.local` und `.lan` am Ende entfernt, beispielsweise `ACER-Frank.fritz.box` → `ACER-Frank`; sonst erscheint ein allgemeiner LAN-Gerätetyp. Das Feld heißt „Name“ und bleibt bearbeitbar. Bereits gespeicherte oder selbst eingegebene Namen werden nicht automatisch umbenannt.
 
 Schlafende Geräte, entfernte VLANs und Hosts ohne verwertbaren Nachbartabelleneintrag können fehlen. Solche Geräte manuell eintragen. Eine IP-Fixierung bzw. DHCP-Reservierung verhindert, dass ein gespeichertes Gerät später eine andere Adresse erhält.
 

@@ -192,7 +192,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			for _, p := range s.Pending {
 				pendingPlans = append(pendingPlans, scheduleView{p.Schedule, commandFor(p), true})
 			}
-			writeJSON(w, 200, map[string]any{"user": user, "version": PackageVersion, "csrf": csrfFor(s, user, r), "devices": s.Devices, "networks": networks, "networkError": networkError, "schedules": plans, "pendingSchedules": pendingPlans, "logs": s.Logs, "diagnostics": s.Diagnostics, "active": s.Active, "settings": map[string]int{"logCenterPort": s.LogCenterPort}}, nil)
+			writeJSON(w, 200, map[string]any{"user": user, "version": PackageVersion, "csrf": csrfFor(s, user, r), "devices": s.Devices, "networks": networks, "discoveryCidr": preferredDiscoveryCIDR(networks, s.DiscoveryCIDR), "networkError": networkError, "schedules": plans, "pendingSchedules": pendingPlans, "logs": s.Logs, "diagnostics": s.Diagnostics, "active": s.Active, "settings": map[string]int{"logCenterPort": s.LogCenterPort}}, nil)
 		case "status":
 			a.statusHTTP(w, s)
 		default:
@@ -251,6 +251,27 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				s.Devices = append(s.Devices, d)
 				data = d
 				return nil
+			})
+		}
+	case "device-favorite":
+		var input struct {
+			ID       string `json:"id"`
+			Favorite *bool  `json:"favorite"`
+		}
+		err = decodeBody(r, &input)
+		if err == nil && input.Favorite == nil {
+			err = errors.New("Favoriten-Auswahl fehlt.")
+		}
+		if err == nil {
+			err = a.update(func(s *Store) error {
+				for i := range s.Devices {
+					if s.Devices[i].ID == input.ID {
+						s.Devices[i].Favorite = *input.Favorite
+						data = s.Devices[i]
+						return nil
+					}
+				}
+				return errors.New("Gerät nicht gefunden.")
 			})
 		}
 	case "device-delete":
@@ -313,6 +334,15 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				var found []FoundDevice
 				var warnings []string
 				found, warnings, err = discover(input.CIDR)
+				if err == nil {
+					_, network, _ := net.ParseCIDR(strings.TrimSpace(input.CIDR))
+					if saveErr := a.update(func(s *Store) error {
+						s.DiscoveryCIDR = network.String()
+						return nil
+					}); saveErr != nil {
+						warnings = append(warnings, "Suchbereich konnte nicht gespeichert werden: "+saveErr.Error())
+					}
+				}
 				data = map[string]any{"devices": found, "warnings": warnings}
 			}
 		}

@@ -10,11 +10,16 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 | Paket starten und öffnen | Eigenes DSM-Fenster zeigt Gerätekacheln, Geräteliste und Automatik. |
 | Zugriff ohne DSM-Anmeldung | `api.cgi` verweigert Daten und Wake-Aktionen. |
 | Zugriff als normaler DSM-Benutzer | Backend verweigert die Administrationsfunktionen. |
-| Gerät mit Name, IP und MAC speichern | Zeile und Kachel erscheinen; Name lässt sich ändern. |
+| Gerät mit Name, IP und MAC speichern | Zeile erscheint ohne Favoriten-Häkchen; Name lässt sich ändern. |
+| Favorit setzen und entfernen | Nur markierte Geräte erscheinen als Kacheln; Auswahl bleibt nach Neuladen und Paketneustart gespeichert. Alle Geräte bleiben in der Liste und für Automatiken verfügbar. |
+| Nur Favoriten mit „Alle auswählen“ aufwecken | Nur sichtbare Kacheln werden aufgeweckt. Beim Entfernen eines Favoriten verschwindet er auch aus der Schnellauswahl. |
 | Falsche IP oder MAC eingeben | Sichtbare Validierungsfehlermeldung; kein Wake-Paket. |
 | Suchdialog ohne vorhandene Geräte öffnen | Suchbereich wird aus dem aktiven NAS-Netz vorgeschlagen; kein festes `192.168.1.0/24`. |
 | Mehrere aktive Schnittstellen prüfen | NAS-IP, Schnittstelle und echtes Netz sind auswählbar; nicht aktive, Loopback- und `169.254.*`-Schnittstellen fehlen. |
 | Lokales `/24` suchen, auch `192.167.178.0/24` | Erreichbare LAN-Nachbarn mit MAC erscheinen; Treffer samt lokalem Broadcast lassen sich übernehmen und speichern. |
+| Suchtreffer übernehmen | Alle Häkchen sind zunächst leer. Nur angehakte Treffer werden übernommen und beginnen ohne Favoriten-Häkchen. |
+| Namen in der Suche prüfen | Feld heißt „Name“; beispielsweise `ACER-Frank.fritz.box` wird als `ACER-Frank` vorgeschlagen und bleibt bearbeitbar. |
+| Erfolgreich eingegebenen Suchbereich wieder öffnen | Nach DSM-Neuladen oder Paketneustart wird der gespeicherte Bereich wieder angeboten, sofern er noch innerhalb eines aktiven NAS-Netzes liegt. |
 | Tatsächliches `/25` bis `/30` prüfen | Suchvorschlag behält die Netzmaske; über das angeschlossene Netz hinausgehende Bereiche werden abgewiesen. |
 | Einzelgerät und Schnellauswahl starten | Magic Packet erreicht den Testrechner; Status wechselt von „Wird aufgeweckt“ nach „Online“, wenn ICMP beantwortet wird. |
 | Onlineprüfung mit gesperrtem ICMP | Gerät wird nicht als nachweislich online angezeigt; Einschränkung ist nachvollziehbar. |
@@ -38,7 +43,7 @@ Diese Liste ist eine Anleitung für die Zielsystemprüfung. Ein lokaler Build od
 
 ## Diagnose bei einem Fehler
 
-Für Version 0.1.4 zusätzlich Paket-Zentrum und Widgets offen halten, SynoWake stoppen/starten und das App-Fenster öffnen/schließen. Texte, Zeilenhöhen, Symbole und Formularfelder außerhalb von SynoWake müssen unverändert bleiben. Nach dem Upgrade DSM einmal vollständig neu laden (ggf. Strg+F5), damit bereits geladene CSS-Regeln der alten Version entfernt werden. Geräte, Zeitpläne und Ausführungsprotokolle müssen beim Upgrade erhalten bleiben.
+Zusätzlich Paket-Zentrum und Widgets offen halten, SynoWake stoppen/starten und das App-Fenster öffnen/schließen. Texte, Zeilenhöhen, Symbole und Formularfelder außerhalb von SynoWake müssen unverändert bleiben. Nach dem Upgrade DSM einmal vollständig neu laden (ggf. Strg+F5), damit bereits geladene Dateien der alten Version entfernt werden. Geräte, Zeitpläne und Ausführungsprotokolle müssen beim Upgrade erhalten bleiben. In 0.1.5 beginnen vorhandene Geräte ohne bisheriges Favoritenfeld ohne Häkchen; gewünschte Kacheln einmal in der Geräteliste markieren.
 
 Das sichtbare Fehlerbild, die DSM-Version, die Uhrzeit und die Aktion festhalten. Im SynoWake-Protokoll die Diagnose ansehen. Bei Problemen mit Installation oder Start zusätzlich `/var/log/packages/SynoWake.log` und die DSM-Paketbetriebsprotokolle prüfen. Die private Dateiablage in `/var/packages/SynoWake/var` enthält Zeitplan-Geheimnisse und gehört nicht in ungeschwärzte Supportberichte.
 

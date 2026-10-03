@@ -91,6 +91,22 @@ func preferredLocalNetworks(networks []LocalNetwork, addresses ...string) []Loca
 	return result
 }
 
+// Retain a successful manual search only while its entire range is on-link.
+// Otherwise prefer the active interface serving the DSM request.
+func preferredDiscoveryCIDR(networks []LocalNetwork, saved string) string {
+	if saved != "" {
+		if network, err := discoveryNetworkFor(saved, networks); err == nil {
+			return network.String()
+		}
+	}
+	for _, network := range networks {
+		if network.SearchCIDR != "" {
+			return network.SearchCIDR
+		}
+	}
+	return ""
+}
+
 func isOnLinkHost(ip net.IP, networks []LocalNetwork) bool {
 	for _, local := range networks {
 		_, network, err := net.ParseCIDR(local.CIDR)

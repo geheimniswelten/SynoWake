@@ -188,6 +188,14 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
         raise ValueError("INFO checksum is calculated at build time; remove it from the template")
     info += f'checksum="{hashlib.md5(compressed).hexdigest()}"\n'
     version = re.search(r'^version="([\d._-]+)"$', info, re.MULTILINE).group(1)
+    for name, references in {
+        "ui/index.html": ("assets/synowake.css", "app.js"),
+        "ui/app.js": ("./scheduler.js",),
+        "ui/SynoWake.js": ("/webman/3rdparty/SynoWake/index.html",),
+    }.items():
+        for reference in references:
+            if f"{reference}?v={version}".encode() not in payload[name][0]:
+                raise ValueError(f"Missing versioned asset reference in {name}: {reference}?v={version}")
     package: dict[str, tuple[bytes, int]] = {
         "INFO": (info.encode("utf-8"), 0o644),
         "package.tgz": (compressed, 0o644),

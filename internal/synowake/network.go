@@ -54,6 +54,16 @@ type FoundDevice struct {
 	Broadcast string `json:"broadcast,omitempty"`
 }
 
+func discoveryName(name string) string {
+	name = strings.TrimSuffix(strings.TrimSpace(name), ".")
+	for _, suffix := range []string{".fritz.box", ".local", ".lan"} {
+		if strings.HasSuffix(strings.ToLower(name), suffix) && len(name) > len(suffix) {
+			return name[:len(name)-len(suffix)]
+		}
+	}
+	return name
+}
+
 func discoveryNetwork(cidr string) (*net.IPNet, error) {
 	networks, err := localNetworks()
 	if err != nil {
@@ -162,7 +172,9 @@ func discover(cidr string) ([]FoundDevice, []string, error) {
 			defer cancel()
 			names, _ := net.DefaultResolver.LookupAddr(ctx, ip)
 			if len(names) > 0 {
-				name = strings.TrimSuffix(names[0], ".")
+				if resolved := discoveryName(names[0]); resolved != "" {
+					name = resolved
+				}
 			}
 			mu.Lock()
 			results = append(results, FoundDevice{Name: name, IP: ip, MAC: mac, Type: "LAN-Gerät", Broadcast: broadcast})

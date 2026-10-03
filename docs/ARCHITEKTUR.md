@@ -27,7 +27,11 @@ Die private Datenablage liegt im DSM-Paketverzeichnis `var`, außerhalb des UI-V
 
 ## Lokale Netzwerke
 
+Der Zustand enthält pro Gerät ein boolesches `favorite`. Ohne dieses Feld gilt `false`; das bisherige Dateiformat bleibt lesbar. Der geschützte POST-Endpunkt `device-favorite` ändert atomar ausschließlich dieses Feld und erhält Adressen, Namen, Wake-Zustand und Zeitpläne. Übersicht, Statuszähler und Schnellauswahl verwenden ausschließlich Favoriten; Geräteliste und Automatiken behalten den gesamten Bestand.
+
 Der Backend-Zustand enthält aktive IPv4-Schnittstellen mit NAS-Adresse, CIDR, begrenztem Suchvorschlag und Broadcast-Adresse. Loopback und IPv4-Link-Local werden ausgefiltert. Der ursprüngliche Serverkontext der DSM-CGI priorisiert die Schnittstelle, über die DSM erreicht wird; die Hostadresse dient als Ersatz. Der Suchdialog lädt diese Liste beim Öffnen neu und bietet die Schnittstellen zur Auswahl an.
+
+Nach einer erfolgreichen Suche wird deren normalisierter Bereich als `discoveryCidr` gespeichert. Die Zustandsabfrage validiert ihn erneut gegen die aktuellen Schnittstellennetze, bevor sie ihn als Vorgabe liefert; ein nicht mehr angeschlossener Bereich wird durch den aktuellen Schnittstellenvorschlag ersetzt. DNS-Namen erhalten für die Übernahme keine bekannten lokalen Endungen `.fritz.box`, `.local` oder `.lan`. HTML, JavaScript-Module und CSS verwenden versionierte URLs; der Builder überprüft ihre Übereinstimmung mit INFO.
 
 Ein Suchnetz muss vollständig in einem angeschlossenen Schnittstellennetz liegen. Die Adressklasse allein entscheidet nicht über die Zulässigkeit: Ein lokal verwendetes `192.167.178.0/24` ist zulässig, ein nicht angeschlossenes `192.168.1.0/24` bleibt unzulässig. Größere Netze werden für den Suchvorschlag auf den `/24`-Bereich mit der NAS-Adresse begrenzt; `/25` bis `/30` bleiben unverändert. Die Validierung verwendet Netzanfang und Netzende, damit ein Suchbereich keine enger konfigurierte Netzmaske überschreitet.
 
