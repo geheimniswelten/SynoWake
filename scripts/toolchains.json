@@ -1,0 +1,30 @@
+{
+  "python": {
+    "version": "3.13.12",
+    "executable": "python.exe",
+    "windows": {
+      "amd64": {
+        "url": "https://www.python.org/ftp/python/3.13.12/python-3.13.12-embed-amd64.zip",
+        "sha256": "76f238f606250c87c6beac75dccd35ee99070a13490555936abb6cb64ecce3d0"
+      },
+      "arm64": {
+        "url": "https://www.python.org/ftp/python/3.13.12/python-3.13.12-embed-arm64.zip",
+        "sha256": "b034042d46e20de57dab22de1813d56bde286899d9d9991255a7c0e1f7efbfa0"
+      }
+    }
+  },
+  "go": {
+    "version": "1.27.1",
+    "executable": "go/bin/go.exe",
+    "windows": {
+      "amd64": {
+        "url": "https://go.dev/dl/go1.27.1.windows-amd64.zip",
+        "sha256": "a3911b5e0e1b1053f25ed0675f4c1c6aad1e2bfcf253df2b9be4caabd2edd95d"
+      },
+      "arm64": {
+        "url": "https://go.dev/dl/go1.27.1.windows-arm64.zip",
+        "sha256": "13b69b87bb0e83f96bc68560a8cace7f0343b1e03469f1110ea18d17e3234069"
+      }
+    }
+  }
+}

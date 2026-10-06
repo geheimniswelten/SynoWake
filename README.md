@@ -1,10 +1,5 @@
 Deutsch · [English](README.en.md) · [GitHub](https://geheimniswelten.github.io/#synowake)
 
-### Kurz
-
-- [.spk](https://github.com/geheimniswelten/SynoWake/releases) installieren
-- und direkt aus dem DSM heraus Geräte aufwecken :)
-
 # SynoWake
 
 Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Die interne Paketkennung lautet `h5uSynoWake`; der DisplayName und der sichtbare Name im DSM bleiben **SynoWake**.
@@ -43,11 +38,25 @@ Die Suche verwendet aktive NAS-Schnittstellen und deren Netzmasken. Auch direkt 
 
 ## Paket bauen
 
-Auf dem Entwicklungsrechner werden **Python 3.10 oder neuer** und **Go 1.24 oder neuer** benötigt. Die NAS benötigt weder Go noch Python, PHP, Web Station oder Container Manager: Das Paket enthält ein statisches Linux/amd64-Programm und statische Oberflächendateien.
+Ein frisch geklontes Repo lässt sich unter **Windows 64 Bit mit PowerShell 5.1 oder neuer** bauen. Beim ersten Aufruf ist Internetzugriff nötig, wenn die Build-Werkzeuge fehlen. Die NAS benötigt weder Go noch Python, PHP, Web Station oder Container Manager: Das Paket enthält ein statisches Linux/amd64-Programm und statische Oberflächendateien.
+
+Im Repo-Root den vollständigen Build starten:
 
 ```powershell
-python scripts/build.py
+.\BUILD.cmd
 ```
+
+`BUILD.cmd` startet `BUILD.ps1` mit dem Windows-eigenen PowerShell. Das Skript kompiliert das Backend aus den aktuellen Quellen und erzeugt die versionierte `.spk` samt `.spk.sha256` unter `dist/`. Es funktioniert auch beim Aufruf aus einem anderen Arbeitsverzeichnis.
+
+Passende vorhandene Versionen (**Python 3.10+**, **Go laut `go.mod`**) werden aus dem `PATH` verwendet; für Python wird auch `py -3` unterstützt. Fehlende oder zu alte Werkzeuge lädt das Skript als portable ZIPs von [python.org](https://www.python.org/downloads/release/python-31312/) und [go.dev](https://go.dev/dl/) nach `work/toolchains/`. Versionen, URLs und SHA256-Prüfwerte sind in `scripts/toolchains.json` festgelegt. Downloads werden vor dem Entpacken geprüft und bei späteren Builds wiederverwendet. Go-Build-Caches bleiben unter `work/`. Diese Dateien sind von Git ausgeschlossen; eine systemweite Installation oder Administratorrechte sind nicht nötig.
+
+Eigene Programmpfade lassen sich mit `-Python` und `-Go` oder über `SYNOWAKE_PYTHON` und `SYNOWAKE_GO` angeben:
+
+```powershell
+.\BUILD.cmd -Python 'C:\Python313\python.exe' -Go 'C:\Go\bin\go.exe'
+```
+
+Der direkte Aufruf `python scripts/build.py` bleibt ebenfalls möglich und benötigt bereits vorhandenes Python 3.10+ und Go im `PATH`.
 
 Alternativ ein bereits gebautes statisches Programm verwenden:
 

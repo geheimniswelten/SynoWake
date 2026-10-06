@@ -1,10 +1,5 @@
 [Deutsch](README.md) · English · [GitHub](https://geheimniswelten.github.io/#synowake)
 
-### Short
-
-- Install the [.spk](https://github.com/geheimniswelten/SynoWake/releases) "manually" via Package Center
-- and from now on, wake up devices directly from within DSM :)
-
 # SynoWake
 
 Wake-on-LAN application for a Synology **DS918+ running DSM 7.1**. The internal package ID is `h5uSynoWake`; the DisplayName and visible DSM application name remain **SynoWake**.
@@ -35,11 +30,25 @@ The interface loads private `ui/assets/synowake.css` inside its iframe. Selector
 
 ## Build and tests
 
-The development machine requires **Python 3.10+** and **Go 1.24+**. The NAS requires no Go, Python, PHP, Web Station or Container Manager: the package contains a static Linux/amd64 binary and static interface assets.
+A fresh clone can be built on **64-bit Windows with PowerShell 5.1+**. The first invocation needs internet access if build tools are missing. The NAS requires no Go, Python, PHP, Web Station or Container Manager: the package contains a static Linux/amd64 binary and static interface assets.
+
+Start the full build from the repository root:
 
 ```powershell
-python scripts/build.py
+.\BUILD.cmd
 ```
+
+`BUILD.cmd` starts `BUILD.ps1` with the PowerShell bundled with Windows. The script compiles the backend from the current sources and generates the versioned `.spk` and `.spk.sha256` in `dist/`. It also works when invoked from another working directory.
+
+Compatible installed versions (**Python 3.10+**, **Go as required by `go.mod`**) are reused from `PATH`; Python's `py -3` launcher is supported. Missing or outdated tools are downloaded as portable ZIPs from [python.org](https://www.python.org/downloads/release/python-31312/) and [go.dev](https://go.dev/dl/) into `work/toolchains/`. Versions, URLs and SHA256 checksums are pinned in `scripts/toolchains.json`. Downloads are verified before extraction and reused on subsequent builds. Go build caches stay under `work/`. These files are ignored by Git; no system installation or administrator privileges are needed.
+
+Alternatively, supply executable paths using `-Python` and `-Go`, or set `SYNOWAKE_PYTHON` and `SYNOWAKE_GO`:
+
+```powershell
+.\BUILD.cmd -Python 'C:\Python313\python.exe' -Go 'C:\Go\bin\go.exe'
+```
+
+Direct invocation with `python scripts/build.py` remains available and requires Python 3.10+ and Go already installed on `PATH`.
 
 Or package a previously built static binary:
 
