@@ -6,6 +6,8 @@ Wake-on-LAN application for a Synology **DS918+ running DSM 7.1**. The internal 
 
 The application opens in a DSM window with favorite device tiles, a searchable device list and an automation tab with execution logs. Schedules are created, edited and deleted through the existing DSM session using `SYNO.Core.TaskScheduler`. SynoWake does not modify `/etc/crontab` or `task_config.xml`.
 
+**Version 1.1.0-0018:** Devices can be woken via individual wake links from the local network, for example from a Shelly button or Home Assistant.
+
 **Version 1.0.0-0017:** The package version, runtime display and cache URLs use `1.0.0-0017`. The BETA flag is removed; build number `0017` is retained.
 
 **Version 0.1.16-0017: more time for web interfaces.** The HTTP-header deadline increases from 800 ms to 3 seconds; each HTTP/HTTPS request may take up to 4 seconds. Configured ports are still checked in parallel, with a shared maximum of 8 seconds. This accommodates delayed DSM login pages instead of missing them after less than a second. A regression test deliberately delays an HTTP response by 1.2 seconds. The precise cause of the earlier intermittent NAS results remains unconfirmed.
@@ -58,7 +60,7 @@ python scripts/build.py --binary build/synowake --output dist/h5uSynoWake.spk
 
 The builder validates a static Linux/amd64 ELF, produces an unsigned SPK and SHA256 file, and adds DSM's MD5 checksum for `package.tgz`. Paths, ordering, timestamps, line endings and POSIX permissions are fixed, producing identical archives from identical inputs. The package targets `apollolake`, requires at least DSM `7.1-42661` and has no BETA flag.
 
-Run `go test ./...`, `node tests/scheduler.cjs`, `node tests/i18n.cjs` and `python tests/check-i18n.py`. The backend tests cover packet count/spacing, one execution record, concurrent language requests and unchanged names. The shared catalog is `internal/synowake/translations.json`: Go embeds it and the builder exports `ui/translations.js`. Build checks enforce matching template parameters and versioned language-module URLs.
+Run `go test ./cmd/... ./internal/...`, `node tests/scheduler.cjs`, `node tests/i18n.cjs` and `python tests/check-i18n.py`. The backend tests cover packet count/spacing, one execution record, concurrent language requests and unchanged names. The shared catalog is `internal/synowake/translations.json`: Go embeds it and the builder exports `ui/translations.js`. Build checks enforce matching template parameters and versioned language-module URLs.
 
 `node tests/workflow.cjs` uses Playwright to test German and English workflows, favorite management, device import, simulated DSM API/session responses, recovery and mobile layout. Set `PLAYWRIGHT_MODULE` to the installed library and `BROWSER_EXECUTABLE` to Chromium or Edge if needed. Screenshots and CSS results are written under `work/`. `node scripts/test-ui.mjs` serves the CSS regression page for manual Firefox verification; the legacy fixture is never included in the SPK.
 
@@ -87,6 +89,21 @@ Discovery uses active NAS interfaces and their actual netmasks, preferring the i
 After successful discovery the normalized range is saved. It is proposed again after browser or package restarts if still connected; otherwise a current interface range is used. Search accepts `/24` through `/30` entirely within a connected interface network, up to 254 hosts. Nonprivate but directly connected ranges such as `192.167.178.0/24` are accepted. Larger interface networks propose the `/24` containing the NAS address; smaller networks retain their masks.
 
 The search probes hosts and reads neighbor tables. Import selected new IP/MAC results with their interface's broadcast address. Reverse DNS suggestions remove `.fritz.box`, `.local` and `.lan`, for example `ACER-Frank.fritz.box` → `ACER-Frank`. Saved and manually entered names are never automatically renamed. Sleeping devices, remote VLANs and hosts without usable neighbor entries can be missing; enter them manually. DHCP reservations help prevent saved IP addresses from changing.
+
+## Wake by URL
+
+Open DSM using the DiskStation's local address. In SynoWake, open **Devices → Edit device → Wake link for Shelly and Home Assistant**, then create and copy the link. Paste it as the Shelly action URL for the desired button press. In Home Assistant, configure a [`rest_command`](https://www.home-assistant.io/integrations/rest_command/), for example:
+
+```yaml
+rest_command:
+  wake_backup_nas:
+    url: !secret synowake_backup_url
+    method: post
+```
+
+Set `synowake_backup_url` to the copied URL in `secrets.yaml`. It points to the DiskStation running SynoWake and looks like `https://diskstation:5001/webman/3rdparty/h5uSynoWake/api.cgi?w=<token>`. A successful call sends magic packets; it does not confirm that the device is online yet. The SynoWake log shows **Wake link** as the source.
+
+Wake links are off by default and each link works for one device. Calls use the secret token; creating, renewing and disabling links requires a DSM administrator session. Calls must come from an IPv4 address on a directly connected DiskStation network. Treat the URL as a password, keep it off the internet, and use HTTPS with a certificate the client trusts where possible. Local HTTP exposes the token to listeners on the network. Renewing or disabling the link, or deleting the device, invalidates its old URL.
 
 ## Schedules and package lifecycle
 

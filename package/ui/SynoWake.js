@@ -24,7 +24,7 @@ Ext.define("SYNO.SDS.h5uSynoWake.MainWindow", {
             resizable: true,
             maximizable: true,
             minimizable: true,
-            html: '<iframe title="SynoWake" src="/webman/3rdparty/h5uSynoWake/index.html?v=1.0.0-0017" ' +
+            html: '<iframe title="SynoWake" src="/webman/3rdparty/h5uSynoWake/index.html?v=1.1.0-0018" ' +
                 'style="display:block;width:100%;height:100%;border:0" ' +
                 'referrerpolicy="same-origin"></iframe>'
         }, options));

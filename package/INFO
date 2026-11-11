@@ -1,6 +1,6 @@
 package="h5uSynoWake"
 displayname="SynoWake"
-version="1.0.0-0017"
+version="1.1.0-0018"
 description="Wake-on-LAN devices, discover hosts and manage DSM Task Scheduler wake schedules."
 description_enu="Wake-on-LAN devices, discover hosts and manage DSM Task Scheduler wake schedules."
 description_ger="Wake-on-LAN mit Gerätekacheln, Netzwerksuche und Zeitplänen im DSM-Aufgabenplaner."

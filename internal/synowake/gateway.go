@@ -128,7 +128,7 @@ func newCGIProxy(socket string) http.Handler {
 			return
 		}
 		request.Host = r.Host
-		for _, header := range []string{"Cookie", "Content-Type", "Accept-Language", "X-SYNO-TOKEN", "X-SynoWake-CSRF", "X-SynoWake-Task", "Origin", "Sec-Fetch-Site"} {
+		for _, header := range []string{"Cookie", "Content-Type", "Accept-Language", "X-SYNO-TOKEN", "X-SynoWake-CSRF", "X-SynoWake-Task", "Origin", "Sec-Fetch-Site", "Sec-Purpose", "Purpose"} {
 			if value := r.Header.Get(header); value != "" {
 				request.Header.Set(header, value)
 			}

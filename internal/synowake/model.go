@@ -63,16 +63,17 @@ type Diagnostic struct {
 	Message string `json:"message"`
 }
 type Store struct {
-	Version       int             `json:"version"`
-	Active        bool            `json:"active"`
-	CSRFSecret    string          `json:"csrfSecret"`
-	Devices       []Device        `json:"devices"`
-	Schedules     []savedSchedule `json:"schedules"`
-	Pending       []savedSchedule `json:"pending"`
-	Logs          []Log           `json:"logs"`
-	Diagnostics   []Diagnostic    `json:"diagnostics"`
-	LogCenterPort int             `json:"logCenterPort"`
-	DiscoveryCIDR string          `json:"discoveryCidr,omitempty"`
+	Version       int               `json:"version"`
+	Active        bool              `json:"active"`
+	CSRFSecret    string            `json:"csrfSecret"`
+	Devices       []Device          `json:"devices"`
+	WakeLinks     map[string]string `json:"wakeLinks,omitempty"`
+	Schedules     []savedSchedule   `json:"schedules"`
+	Pending       []savedSchedule   `json:"pending"`
+	Logs          []Log             `json:"logs"`
+	Diagnostics   []Diagnostic      `json:"diagnostics"`
+	LogCenterPort int               `json:"logCenterPort"`
+	DiscoveryCIDR string            `json:"discoveryCidr,omitempty"`
 }
 
 var safeID = regexp.MustCompile(`^[a-f0-9]{32}$`)

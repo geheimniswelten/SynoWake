@@ -1,8 +1,8 @@
-import {t, language, translateDocument} from './i18n.js?v=1.0.0-0017';
-import {DsmScheduler, getSynoToken} from './scheduler.js?v=1.0.0-0017';
+import {t, language, translateDocument} from './i18n.js?v=1.1.0-0018';
+import {DsmScheduler, getSynoToken} from './scheduler.js?v=1.1.0-0018';
 
 const $ = selector => document.querySelector(selector);
-const uiVersion = '1.0.0-0017';
+const uiVersion = '1.1.0-0018';
 translateDocument(document.body);
 const demo = new URLSearchParams(location.search).get('demo') === '1';
 const scheduler = new DsmScheduler();
@@ -19,6 +19,7 @@ let confirmAction;
 let scanResults = [];
 let lastDiscoveryNetwork = '';
 let webRequest = 0;
+let wakeLinkRequest = 0;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -351,7 +352,7 @@ function renderLogs() {
     row.append(element('span', `log-icon${failed ? ' failed' : ''}`, failed ? '!' : '✓'));
     const content = element('div', 'log-content');
     content.append(element('div', 'log-title', log.message || t(failed ? "{0} konnte nicht aufgeweckt werden" : "{0} aufgeweckt", log.deviceName || t('Gerät'))));
-    const detail = [log.source === 'scheduled' || log.source === 'schedule' ? t("Automatik") : log.source === 'manual' ? t("Manuell") : ({status: t('Status'), configuration: t('Konfiguration'), integration: t('Anbindung')}[log.source] || log.source), log.scheduleName, log.error].filter(Boolean).join(' · ');
+    const detail = [log.source === 'scheduled' || log.source === 'schedule' ? t("Automatik") : log.source === 'manual' ? t("Manuell") : ({status: t('Status'), configuration: t('Konfiguration'), integration: t('Anbindung'), url: t('Wecklink')}[log.source] || log.source), log.scheduleName, log.error].filter(Boolean).join(' · ');
     if (detail) content.append(element('div', 'log-detail', detail));
     if (log.centerPending) content.append(element('div', 'log-detail center-pending', t("Protokoll-Center-Übertragung ausstehend")));
     row.append(content, element('time', 'log-date', formatDate(log.time || log.timestamp || log.createdAt))); list.append(row);
@@ -381,12 +382,44 @@ async function wakeDevices(ids) {
 
 function setField(form, name, value) { form.elements.namedItem(name).value = value ?? ''; }
 
+function renderWakeLink(token) {
+  const input = $('#wake-link-url');
+  const url = new URL('api.cgi', location.href);
+  url.searchParams.set('w', token);
+  input.value = token ? url.href : '';
+  $('#wake-link-field').hidden = $('#wake-link-copy').hidden = $('#wake-link-revoke').hidden = !token;
+  $('#wake-link-create').textContent = token ? t('Wecklink erneuern') : t('Wecklink erstellen');
+}
+
+async function manageWakeLink(operation) {
+  const id = $('#device-form').elements.namedItem('id').value;
+  const buttons = ['#wake-link-create', '#wake-link-revoke'].map($);
+  if (!id || buttons[0].disabled) return;
+  const request = ++wakeLinkRequest;
+  buttons.forEach(button => { button.disabled = true; });
+  formError('#wake-link-error');
+  try {
+    const {token} = await api('device-wake-link', {id, operation});
+    if (request === wakeLinkRequest && $('#device-dialog').open) renderWakeLink(token || '');
+  } catch (error) {
+    if (request === wakeLinkRequest && $('#device-dialog').open) formError('#wake-link-error', error);
+  } finally {
+    if (request === wakeLinkRequest) buttons.forEach(button => { button.disabled = false; });
+  }
+}
+
 function openDevice(device = {}) {
   const form = $('#device-form'); form.reset(); formError('#device-form-error');
   $('#device-dialog-title').textContent = device.id ? t("Gerät bearbeiten") : t("Gerät hinzufügen");
   for (const name of ['id', 'name', 'ip', 'mac', 'broadcast', 'webPorts']) setField(form, name, device[name]);
   setField(form, 'port', device.port || 9);
   form.elements.namedItem('favorite').checked = device.favorite === true;
+  ++wakeLinkRequest;
+  $('#device-wake-link').open = false;
+  $('#device-wake-link').hidden = demo || !device.id;
+  $('#wake-link-create').disabled = $('#wake-link-revoke').disabled = false;
+  formError('#wake-link-error');
+  renderWakeLink('');
   $('#device-dialog').showModal();
 }
 
@@ -611,6 +644,14 @@ async function submitBusy(form, action, errorSelector) {
 }
 
 $('#device-form').addEventListener('submit', event => { event.preventDefault(); submitBusy(event.currentTarget, async () => { await api('device-save', devicePayload(event.currentTarget)); await refreshState(); $('#device-dialog').close(); toast(t("Gerät gespeichert.")); }, '#device-form-error'); });
+$('#device-wake-link').addEventListener('toggle', event => { if (event.currentTarget.open && $('#device-dialog').open) manageWakeLink('get'); });
+$('#wake-link-create').addEventListener('click', () => manageWakeLink($('#wake-link-url').value ? 'rotate' : 'create'));
+$('#wake-link-revoke').addEventListener('click', () => manageWakeLink('revoke'));
+$('#wake-link-copy').addEventListener('click', async () => {
+  const input = $('#wake-link-url');
+  try { await navigator.clipboard.writeText(input.value); toast(t('Wecklink kopiert.')); }
+  catch (_) { input.focus(); input.select(); toast(t('Link markiert. Mit Strg+C kopieren.')); }
+});
 $('#schedule-form').addEventListener('submit', event => {
   event.preventDefault();
   submitBusy(event.currentTarget, async () => {
@@ -650,7 +691,7 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '1.0.0-0017', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '1.1.0-0018', diagnostics: [], settings: {logCenterPort: 0}, active: true,
   networks: [{interface: 'Demo-LAN', ip: '192.168.1.2', cidr: '192.168.1.0/24', searchCidr: '192.168.1.0/24', broadcast: '192.168.1.255'}],
   devices: [
     {id: 'demo1', name: t("Arbeitsrechner"), ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true, status: 'offline'},

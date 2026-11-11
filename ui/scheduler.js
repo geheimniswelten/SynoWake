@@ -1,4 +1,4 @@
-import {t} from './i18n.js?v=1.0.0-0017';
+import {t} from './i18n.js?v=1.1.0-0018';
 // DSM's private TaskScheduler API is discovered at runtime. No crontab writes.
 const API = 'SYNO.Core.TaskScheduler';
 const TASK_PREFIX = 'SynoWake: ';

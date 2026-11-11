@@ -197,7 +197,7 @@ async function run() {
   const deviceId = 'a'.repeat(32);
   const scheduleId = 'b'.repeat(32);
   const command = `'bin/synowake' '--run-schedule' '${scheduleId}' '--token' '${'c'.repeat(64)}'`;
-  const data = {user: 'tester', version: '1.0.0-0017', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
+  const data = {user: 'tester', version: '1.1.0-0018', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
   const networks = [
     {interface: 'eth0', ip: '192.167.178.21', cidr: '192.167.178.0/24', searchCidr: '192.167.178.0/24', broadcast: '192.167.178.255'},
     {interface: 'eth1', ip: '10.42.0.130', cidr: '10.42.0.128/25', searchCidr: '10.42.0.128/25', broadcast: '10.42.0.255'}
@@ -213,6 +213,7 @@ async function run() {
   let webMode = 'normal';
   let webCalls = 0;
   let releaseWebRequest;
+  let wakeToken = '';
   await production.route('**/webman/login.cgi', route => route.fulfill({contentType: 'application/json', body: JSON.stringify({SynoToken: 'dsm-token'})}));
   await production.route('**/webapi/entry.cgi?*', route => route.fulfill({contentType: 'application/json', body: success({'SYNO.Core.TaskScheduler': {path: 'entry.cgi', minVersion: 1, maxVersion: 3, requestFormat: 'JSON'}})}));
   await production.route('**/webapi/entry.cgi/SYNO.Core.TaskScheduler', async route => {
@@ -248,6 +249,13 @@ async function run() {
     let result = {};
     if (action === 'state') result = data;
     if (action === 'status') result = statusReply;
+    if (action === 'device-wake-link') {
+      assert.equal(payload.id, deviceId);
+      if (payload.operation === 'create') wakeToken = 'a'.repeat(22);
+      if (payload.operation === 'rotate') wakeToken = 'b'.repeat(22);
+      if (payload.operation === 'revoke') wakeToken = '';
+      result = {token: wakeToken};
+    }
     if (action === 'device-pages') {
       assert.deepEqual(payload, {id: deviceId}); webCalls++;
       if (webMode === 'error') { await route.fulfill({status: 503, contentType: 'application/json', body: JSON.stringify({success: false, error: 'Webprüfung fehlgeschlagen'})}); return; }
@@ -289,7 +297,7 @@ async function run() {
   });
   await production.goto(base);
   const assetRequests = await production.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name));
-  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=1.0.0-0017`)), `Cache version missing for ${asset}`);
+  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=1.1.0-0018`)), `Cache version missing for ${asset}`);
   await production.locator('.status.offline').first().waitFor();
   statusReply = {devices: [{id: deviceId, status: 'unknown', probeMethod: 'tcp', error: 'Keine TCP-Antwort. Status unbekannt.'}]};
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -331,6 +339,19 @@ async function run() {
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await production.locator('#device-tiles .status.offline').waitFor();
   await production.locator('[data-tab=devices]').click();
+  await production.locator('#device-rows').getByRole('button', {name: 'Bearbeiten'}).click();
+  await production.locator('#device-wake-link summary').click();
+  const wakeURL = production.locator('#wake-link-url');
+  assert.equal(await wakeURL.isVisible(), false);
+  await production.locator('#wake-link-create').click();
+  await wakeURL.waitFor({state: 'visible'});
+  assert.equal(await wakeURL.inputValue(), `${base}/api.cgi?w=${'a'.repeat(22)}`);
+  await production.locator('#wake-link-create').filter({hasText: 'Wecklink erneuern'}).click();
+  await production.waitForFunction(token => document.querySelector('#wake-link-url').value.endsWith(token), 'b'.repeat(22));
+  await production.locator('#wake-link-revoke').click();
+  await wakeURL.waitFor({state: 'hidden'});
+  assert.equal(await wakeURL.inputValue(), '');
+  await production.locator('#device-dialog .close-dialog').first().click();
   await production.locator('#discover-open').click();
   await production.locator('#discover-dialog').waitFor({state: 'visible'});
   const cidrField = production.locator('#discover-form [name=cidr]');

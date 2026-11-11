@@ -6,6 +6,8 @@ Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Die interne Pak
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
+**Version 1.1.0-0018:** Geräte können über einen eigenen Wecklink aus dem lokalen Netz aufgeweckt werden, etwa per Shelly-Taster oder Home Assistant.
+
 **Version 1.0.0-0017:** Die Paketversion, Laufzeitanzeige und Cache-URLs sind auf `1.0.0-0017` gesetzt. Das BETA-Flag ist entfernt; die Buildnummer `0017` bleibt erhalten.
 
 **Version 0.1.16-0017: mehr Zeit für Weboberflächen.** Die HTTP-Header-Frist steigt von 800 ms auf 3 Sekunden; eine HTTP-/HTTPS-Anfrage darf insgesamt 4 Sekunden dauern. Alle konfigurierten Ports werden weiterhin parallel geprüft, mit einer gemeinsamen Höchstfrist von 8 Sekunden. Damit werden verzögert erzeugte DSM-Anmeldeseiten nicht schon nach weniger als einer Sekunde übersehen. Ein Regressionstest verwendet eine absichtlich um 1,2 Sekunden verzögerte HTTP-Antwort. Die konkrete Ursache der zuvor schwankenden Ergebnisse auf der NAS ist damit noch nicht nachgewiesen.
@@ -68,7 +70,7 @@ Der Builder prüft das ELF-Ziel Linux/amd64 und lehnt dynamisch gelinkte Program
 
 CSS-Regression prüfen: `node scripts/test-ui.mjs` starten und die ausgegebene lokale Adresse in Firefox öffnen. Der Test reproduziert die Änderung am äußeren Dokument mit der alten CSS, prüft die neue Begrenzung, Dialoge und vier Fensterbreiten. Die alte CSS liegt ausschließlich unter `tests/fixtures` und wird nicht ins SPK aufgenommen.
 
-Den gesamten Oberflächenablauf einschließlich Favoriten, Geräteübernahme und simulierten DSM-WebAPI-Antworten prüft `node tests/workflow.cjs` mit Playwright. `PLAYWRIGHT_MODULE` kann den Pfad zur installierten Playwright-Bibliothek und `BROWSER_EXECUTABLE` den Pfad zu Chromium oder Edge vorgeben. Screenshots und CSS-Prüfergebnis werden unter `work/` gespeichert. Backend-Tests: `go test ./...`.
+Den gesamten Oberflächenablauf einschließlich Favoriten, Geräteübernahme und simulierten DSM-WebAPI-Antworten prüft `node tests/workflow.cjs` mit Playwright. `PLAYWRIGHT_MODULE` kann den Pfad zur installierten Playwright-Bibliothek und `BROWSER_EXECUTABLE` den Pfad zu Chromium oder Edge vorgeben. Screenshots und CSS-Prüfergebnis werden unter `work/` gespeichert. Backend-Tests: `go test ./cmd/... ./internal/...`.
 
 `node tests/scheduler.cjs` prüft außerdem Methodenaufrufe trotz Katalogversion 3, API-Erkennung über moderne und ältere Endpunkte, Fehlercodes und sichere Wiederaufnahme unterbrochener Aufgabenplaner-Anfragen. Die native DSM-Anbindung wird mit typisierten Parametern, Versionsablehnung, Berechtigungsfehler, Verbindungsabbruch, Timeout und verspäteter Antwort geprüft. Der Browser-Test prüft Aufgabenanlage, Änderungen, Abgleich und Löschen über eine nachgebildete DSM-Anfragefunktion sowie deren Zugriff aus einem eingebetteten iframe.
 
@@ -107,6 +109,21 @@ Die Suche akzeptiert `/24` bis `/30`, vollständig innerhalb eines angeschlossen
 Die Suche prüft Hosts und liest Nachbartabellen. IP, MAC und die Broadcast-Adresse der zugehörigen NAS-Schnittstelle lassen sich aus ausgewählten neuen Treffern übernehmen. Zu Beginn ist kein Treffer angehakt. Bereits gespeicherte MAC-Adressen werden als **Bereits vorhanden** markiert und können nicht erneut übernommen werden; ihr gespeicherter Name bleibt erhalten. Übernommene Geräte sind zunächst keine Favoriten. Wenn Reverse-DNS einen Namen liefert, werden `.fritz.box`, `.local` und `.lan` am Ende entfernt, beispielsweise `ACER-Frank.fritz.box` → `ACER-Frank`; sonst erscheint ein allgemeiner LAN-Gerätetyp. Das Feld heißt „Name“ und bleibt bei neuen Treffern bearbeitbar. Bereits gespeicherte oder selbst eingegebene Namen werden nicht automatisch umbenannt.
 
 Schlafende Geräte, entfernte VLANs und Hosts ohne verwertbaren Nachbartabelleneintrag können fehlen. Solche Geräte manuell eintragen. Eine IP-Fixierung bzw. DHCP-Reservierung verhindert, dass ein gespeichertes Gerät später eine andere Adresse erhält.
+
+## Wecken per URL
+
+DSM über die lokale Adresse der DiskStation öffnen. In SynoWake unter **Geräte → Gerät bearbeiten → Wecklink für Shelly und Home Assistant** einen Link erstellen und kopieren. Beim Shelly-Taster die URL als Aktion für den gewünschten Tastendruck hinterlegen. Für Home Assistant kann derselbe Link als [`rest_command`](https://www.home-assistant.io/integrations/rest_command/) hinterlegt werden, zum Beispiel:
+
+```yaml
+rest_command:
+  backup_nas_wecken:
+    url: !secret synowake_backup_url
+    method: post
+```
+
+Den kopierten Link als `synowake_backup_url` in `secrets.yaml` eintragen. Er führt zur DiskStation, auf der SynoWake läuft, und hat die Form `https://diskstation:5001/webman/3rdparty/h5uSynoWake/api.cgi?w=<Schlüssel>`. Ein erfolgreicher Aufruf sendet Magic Packets; er bestätigt nicht, dass das Ziel bereits online ist. Im SynoWake-Protokoll erscheint die Quelle **Wecklink**.
+
+Die Links sind standardmäßig aus und gelten je für ein Gerät. Für den Aufruf genügt der geheime Schlüssel; Anlegen, Erneuern und Deaktivieren erfordern eine DSM-Administratorsitzung. SynoWake akzeptiert die Aufrufe von IPv4-Adressen in direkt angeschlossenen Netzen der DiskStation. Die URL wie ein Passwort behandeln, nicht ins Internet freigeben und nach Möglichkeit HTTPS mit einem vom Aufrufer akzeptierten Zertifikat verwenden. Bei lokalem HTTP kann der Schlüssel im Netz mitgelesen werden. Erneuern, Deaktivieren oder Löschen des Geräts macht den bisherigen Link ungültig.
 
 ## Zeitpläne und Paketlebenszyklus
 

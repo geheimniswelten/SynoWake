@@ -121,7 +121,12 @@ func callbackFor(r *http.Request) string {
 }
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w = forRequest(w, r)
-	action := r.URL.Query().Get("action")
+	query := r.URL.Query()
+	if query.Has("w") {
+		a.wakeLinkHTTP(w, r)
+		return
+	}
+	action := query.Get("action")
 	if action == "scheduled-run" {
 		a.scheduledHTTP(w, r)
 		return
@@ -208,6 +213,8 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var data any
 	switch action {
+	case "device-wake-link":
+		data, err = a.manageWakeLink(r, s)
 	case "settings-save":
 		var input struct {
 			LogCenterPort int `json:"logCenterPort"`
@@ -333,6 +340,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				for i, d := range s.Devices {
 					if d.ID == input.ID {
+						delete(s.WakeLinks, d.ID)
 						s.Devices = append(s.Devices[:i], s.Devices[i+1:]...)
 						return nil
 					}
@@ -540,6 +548,7 @@ func (a *App) wakeDevice(id string, notify bool, source, scheduleID string) erro
 }
 
 var errDuplicate = errors.New("Zeitplan bereits ausgeführt")
+var errWakeCooldown = errors.New("Gerät wurde gerade aufgeweckt. Bitte kurz warten.")
 
 func (a *App) wakeDeviceClaim(id string, notify bool, source, scheduleID string, claim func(*Store) error) (bool, error) {
 	var device Device
@@ -566,7 +575,7 @@ func (a *App) wakeDeviceClaim(id string, notify bool, source, scheduleID string,
 		for i, d := range s.Devices {
 			if d.ID == id {
 				if time.Since(d.LastWake) < 5*time.Second {
-					return errors.New("Gerät wurde gerade aufgeweckt. Bitte kurz warten.")
+					return errWakeCooldown
 				}
 				device = d
 				s.Devices[i].LastWake = time.Now().UTC()
