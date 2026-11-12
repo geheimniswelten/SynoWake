@@ -6,6 +6,8 @@ Wake-on-LAN-Anwendung für Synology-NAS der Plattformfamilie **x86_64** ab DSM *
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
+**Aktuelle Paketversion:** `1.1.1-0019`.
+
 **Version 1.1.0-0018:** Geräte können über einen eigenen Wecklink aus dem lokalen Netz aufgeweckt werden, etwa per Shelly-Taster oder Home Assistant.
 
 **Version 1.0.0-0017:** Die Paketversion, Laufzeitanzeige und Cache-URLs sind auf `1.0.0-0017` gesetzt. Das BETA-Flag ist entfernt; die Buildnummer `0017` bleibt erhalten.

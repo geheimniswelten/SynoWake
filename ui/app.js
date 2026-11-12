@@ -1,8 +1,8 @@
-import {t, language, translateDocument} from './i18n.js?v=1.1.0-0018';
-import {DsmScheduler, getSynoToken} from './scheduler.js?v=1.1.0-0018';
+import {t, language, translateDocument} from './i18n.js?v=1.1.1-0019';
+import {DsmScheduler, getSynoToken} from './scheduler.js?v=1.1.1-0019';
 
 const $ = selector => document.querySelector(selector);
-const uiVersion = '1.1.0-0018';
+const uiVersion = '1.1.1-0019';
 translateDocument(document.body);
 const demo = new URLSearchParams(location.search).get('demo') === '1';
 const scheduler = new DsmScheduler();
@@ -691,7 +691,7 @@ $('#discover-import').addEventListener('click', async event => {
 });
 
 const demoState = {
-  user: 'DSM-Demo', csrf: 'demo-only', version: '1.1.0-0018', diagnostics: [], settings: {logCenterPort: 0}, active: true,
+  user: 'DSM-Demo', csrf: 'demo-only', version: '1.1.1-0019', diagnostics: [], settings: {logCenterPort: 0}, active: true,
   networks: [{interface: 'Demo-LAN', ip: '192.168.1.2', cidr: '192.168.1.0/24', searchCidr: '192.168.1.0/24', broadcast: '192.168.1.255'}],
   devices: [
     {id: 'demo1', name: t("Arbeitsrechner"), ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true, status: 'offline'},

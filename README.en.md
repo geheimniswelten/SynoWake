@@ -6,6 +6,8 @@ Wake-on-LAN application for Synology NAS in the **x86_64** platform family runni
 
 The application opens in a DSM window with favorite device tiles, a searchable device list and an automation tab with execution logs. Schedules are created, edited and deleted through the existing DSM session using `SYNO.Core.TaskScheduler`. SynoWake does not modify `/etc/crontab` or `task_config.xml`.
 
+**Current package version:** `1.1.1-0019`.
+
 **Version 1.1.0-0018:** Devices can be woken via individual wake links from the local network, for example from a Shelly button or Home Assistant.
 
 **Version 1.0.0-0017:** The package version, runtime display and cache URLs use `1.0.0-0017`. The BETA flag is removed; build number `0017` is retained.
