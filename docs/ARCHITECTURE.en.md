@@ -8,7 +8,7 @@
 
 ```text
 h5uSynoWake.spk
-  INFO                       Package ID, apollolake, minimum DSM version
+  INFO                       Package ID, x86_64, minimum DSM version
   conf/privilege             defaults.run-as: package only
   scripts/                   init/start/stop/status
   package.tgz

@@ -2,7 +2,7 @@
 
 # SynoWake
 
-Wake-on-LAN application for a Synology **DS918+ running DSM 7.1**. The internal package ID is `h5uSynoWake`; the DisplayName and visible DSM application name remain **SynoWake**.
+Wake-on-LAN application for Synology NAS in the **x86_64** platform family running DSM **7.1-42661** or later, developed on a DS918+. The internal package ID is `h5uSynoWake`; the DisplayName and visible DSM application name remain **SynoWake**.
 
 The application opens in a DSM window with favorite device tiles, a searchable device list and an automation tab with execution logs. Schedules are created, edited and deleted through the existing DSM session using `SYNO.Core.TaskScheduler`. SynoWake does not modify `/etc/crontab` or `task_config.xml`.
 
@@ -52,13 +52,13 @@ Alternatively, supply executable paths using `-Python` and `-Go`, or set `SYNOWA
 
 Direct invocation with `python scripts/build.py` remains available and requires Python 3.10+ and Go already installed on `PATH`.
 
-Or package a previously built static binary:
+Or package a previously built static Linux/amd64 binary built with `GOAMD64=v1`:
 
 ```powershell
 python scripts/build.py --binary build/synowake --output dist/h5uSynoWake.spk
 ```
 
-The builder validates a static Linux/amd64 ELF, produces an unsigned SPK and SHA256 file, and adds DSM's MD5 checksum for `package.tgz`. Paths, ordering, timestamps, line endings and POSIX permissions are fixed, producing identical archives from identical inputs. The package targets `apollolake`, requires at least DSM `7.1-42661` and has no BETA flag.
+The builder validates a static Linux/amd64 ELF, produces an unsigned SPK and SHA256 file, and adds DSM's MD5 checksum for `package.tgz`. Paths, ordering, timestamps, line endings and POSIX permissions are fixed, producing identical archives from identical inputs. `h5uSynoWake-<version>-x86_64.spk` targets Synology's [x86_64 platform family](https://help.synology.com/developer-guide/toolkit/pack_stage.html), including `apollolake` (DS918+), with the baseline `GOAMD64=v1` and minimum DSM `7.1-42661`. Additional NAS models require hardware validation. ARM is outside this package's target, and there is no BETA flag.
 
 Run `go test ./cmd/... ./internal/...`, `node tests/scheduler.cjs`, `node tests/i18n.cjs` and `python tests/check-i18n.py`. The backend tests cover packet count/spacing, one execution record, concurrent language requests and unchanged names. The shared catalog is `internal/synowake/translations.json`: Go embeds it and the builder exports `ui/translations.js`. Build checks enforce matching template parameters and versioned language-module URLs.
 

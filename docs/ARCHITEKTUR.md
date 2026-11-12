@@ -8,7 +8,7 @@ Deutsch · [English](ARCHITECTURE.en.md)
 
 ```text
 h5uSynoWake.spk
-  INFO                         Paketkennung, apollolake, DSM-Mindestversion
+  INFO                         Paketkennung, x86_64, DSM-Mindestversion
   conf/privilege               ausschließlich defaults.run-as: package
   scripts/                     init/start/stop/status
   package.tgz

@@ -125,7 +125,7 @@ def check_binary(binary: bytes) -> None:
     if len(binary) < 64 or binary[:6] != b"\x7fELF\x02\x01":
         raise ValueError("Backend must be a little-endian 64-bit Linux ELF, not a Windows executable")
     if struct.unpack_from("<H", binary, 18)[0] != 62:
-        raise ValueError("Backend must target amd64/x86-64 for DS918+ (apollolake)")
+        raise ValueError("Backend must target Linux/amd64 (x86-64)")
     # No PT_INTERP: dynamic-loader dependencies would defeat the static package.
     ph_offset = struct.unpack_from("<Q", binary, 32)[0]
     ph_size, ph_count = struct.unpack_from("<HH", binary, 54)
@@ -141,7 +141,7 @@ def compile_binary(go_command: str) -> Path:
     binary = ROOT / "build" / "synowake"
     binary.parent.mkdir(parents=True, exist_ok=True)
     executable = shutil.which(go_command) or go_command
-    env = dict(os.environ, GOOS="linux", GOARCH="amd64", CGO_ENABLED="0")
+    env = dict(os.environ, GOOS="linux", GOARCH="amd64", GOAMD64="v1", CGO_ENABLED="0")
     subprocess.run([executable, "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w",
                     "-o", str(binary), "./cmd/synowake"], cwd=ROOT, env=env, check=True)
     return binary
@@ -194,7 +194,8 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     payload["bin/synowake"] = (binary, 0o755)
     payload["run/.keep"] = (b"", 0o644)
     for size in (16, 24, 32, 48, 64, 72, 128, 256):
-        payload[f"ui/images/icon_{size}.png"] = (icon_png(size), 0o644)
+        if f"ui/images/icon_{size}.png" not in payload:
+            raise ValueError(f"Missing DSM icon: ui/images/icon_{size}.png; regenerate with --icons")
     compressed = gzip_bytes(tar_bytes(payload))
 
     info = normalized(package_root / "INFO").decode("utf-8").rstrip() + "\n"
@@ -203,6 +204,8 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     info += f'checksum="{hashlib.md5(compressed).hexdigest()}"\n'
     package_name = re.search(r'^package="([^"\r\n]+)"$', info, re.MULTILINE).group(1)
     version = re.search(r'^version="([\d._-]+)"$', info, re.MULTILINE).group(1)
+    arch = re.search(r'^arch="([a-zA-Z0-9_]+)"$', info, re.MULTILINE).group(1)
+    dsm_min = re.search(r'^os_min_ver="([\d.-]+)"$', info, re.MULTILINE).group(1)
     for name, references in {
         "ui/index.html": ("assets/synowake.css", "app.js"),
         "ui/app.js": ("./scheduler.js", "./i18n.js"),
@@ -216,8 +219,8 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     package: dict[str, tuple[bytes, int]] = {
         "INFO": (info.encode("utf-8"), 0o644),
         "package.tgz": (compressed, 0o644),
-        "PACKAGE_ICON.PNG": (payload["ui/images/icon_64.png"][0], 0o644),
-        "PACKAGE_ICON_256.PNG": (payload["ui/images/icon_256.png"][0], 0o644),
+        "PACKAGE_ICON.PNG": ((package_root / "PACKAGE_ICON.PNG").read_bytes(), 0o644),
+        "PACKAGE_ICON_256.PNG": ((package_root / "PACKAGE_ICON_256.PNG").read_bytes(), 0o644),
     }
     for directory in ("conf", "scripts"):
         for path in sorted((package_root / directory).rglob("*")):
@@ -226,23 +229,39 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
                 if directory == "conf" and path.name in {"privilege", "resource"}:
                     json.loads(content)
                 package[path.relative_to(package_root).as_posix()] = (content, 0o755 if directory == "scripts" else 0o644)
-    output_path = output_path or ROOT / "dist" / f"{package_name}-{version}-apollolake.spk"
+    output_path = output_path or ROOT / "dist" / f"{package_name}-{version}-{arch}.spk"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(tar_bytes(package))
     digest = hashlib.sha256(output_path.read_bytes()).hexdigest()
     output_path.with_suffix(output_path.suffix + ".sha256").write_text(f"{digest}  {output_path.name}\n", encoding="ascii")
     print(f"SPK: {output_path}")
     print(f"SHA256: {digest}")
-    print("Target: DS918+ / apollolake / DSM >= 7.1-42661 (target NAS validation required)")
+    print(f"Target: {arch} / DSM >= {dsm_min} (target NAS validation required)")
     return output_path
+
+
+def generate_icons():
+    """Refresh the checked-in DSM and package icons after an icon design change."""
+    package = ROOT / "package"
+    images = package / "ui" / "images"
+    images.mkdir(parents=True, exist_ok=True)
+    for size in (16, 24, 32, 48, 64, 72, 128, 256):
+        data = icon_png(size)
+        (images / f"icon_{size}.png").write_bytes(data)
+        if size in (64, 256):
+            (package / ("PACKAGE_ICON.PNG" if size == 64 else "PACKAGE_ICON_256.PNG")).write_bytes(data)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--icons", action="store_true", help="Regenerate checked-in icons and exit")
     parser.add_argument("--binary", type=Path, help="Use an existing static Linux/amd64 ELF instead of compiling")
     parser.add_argument("--go", default="go", help="Go executable used when --binary is omitted")
     parser.add_argument("--output", type=Path, help="Output .spk path; defaults to dist/")
     args = parser.parse_args()
+    if args.icons:
+        generate_icons()
+        return 0
     try:
         binary_path = args.binary or compile_binary(args.go)
         build(binary_path.resolve(), args.output.resolve() if args.output else None)

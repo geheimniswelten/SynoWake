@@ -2,7 +2,7 @@ Deutsch · [English](README.en.md) · [GitHub](https://geheimniswelten.github.io
 
 # SynoWake
 
-Wake-on-LAN-Anwendung für eine Synology **DS918+ mit DSM 7.1**. Die interne Paketkennung lautet `h5uSynoWake`; der DisplayName und der sichtbare Name im DSM bleiben **SynoWake**.
+Wake-on-LAN-Anwendung für Synology-NAS der Plattformfamilie **x86_64** ab DSM **7.1-42661**, entwickelt auf einer DS918+. Die interne Paketkennung lautet `h5uSynoWake`; der DisplayName und der sichtbare Name im DSM bleiben **SynoWake**.
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
@@ -42,6 +42,8 @@ Die Suche verwendet aktive NAS-Schnittstellen und deren Netzmasken. Auch direkt 
 
 Ein frisch geklontes Repo lässt sich unter **Windows 64 Bit mit PowerShell 5.1 oder neuer** bauen. Beim ersten Aufruf ist Internetzugriff nötig, wenn die Build-Werkzeuge fehlen. Die NAS benötigt weder Go noch Python, PHP, Web Station oder Container Manager: Das Paket enthält ein statisches Linux/amd64-Programm und statische Oberflächendateien.
 
+Die Paket-Icons liegen neben `package/INFO`, die DSM-Größen unter `package/ui/images/` und werden beim Build unverändert verwendet. Nach einer Änderung der Icon-Zeichenfunktionen in `scripts/build.py` alle Bilder mit `UPDATE_ICONS.cmd` (alternativ `python scripts/build.py --icons`) neu erzeugen und die geänderten PNG-Dateien einchecken.
+
 Im Repo-Root den vollständigen Build starten:
 
 ```powershell
@@ -60,7 +62,7 @@ Eigene Programmpfade lassen sich mit `-Python` und `-Go` oder über `SYNOWAKE_PY
 
 Der direkte Aufruf `python scripts/build.py` bleibt ebenfalls möglich und benötigt bereits vorhandenes Python 3.10+ und Go im `PATH`.
 
-Alternativ ein bereits gebautes statisches Programm verwenden:
+Alternativ ein bereits gebautes statisches Linux/amd64-Programm mit `GOAMD64=v1` verwenden:
 
 ```powershell
 python scripts/build.py --binary build/synowake --output dist/h5uSynoWake.spk
@@ -76,7 +78,7 @@ Den gesamten Oberflächenablauf einschließlich Favoriten, Geräteübernahme und
 
 `node tests/i18n.cjs` und `python tests/check-i18n.py` prüfen die Sprachwahl, Parameter der Übersetzungen, sämtliche statischen Oberflächentexte, Benachrichtigungskataloge und sprachunabhängige Fehlerbehandlung. Der Browser-Test prüft auch den englischen Ablauf. Der gemeinsame Übersetzungskatalog liegt in `internal/synowake/translations.json`: Go bettet ihn ein; der Builder erzeugt daraus `ui/translations.js` für den Browser. Der Builder kontrolliert die Parameter der Vorlagen und die Versionsangaben der Sprachmodule.
 
-Das Paket ist auf die DSM-Architektur `apollolake` und mindestens `7.1-42661` eingestellt. Es ist nicht signiert; das BETA-Flag ist nicht gesetzt.
+Das Paket verwendet Synologys [Plattformfamilie `x86_64`](https://help.synology.com/developer-guide/toolkit/pack_stage.html). Sie umfasst auch `apollolake` (DS918+). Die Mindestversion bleibt `7.1-42661`. Der Build erzeugt `h5uSynoWake-<Version>-x86_64.spk` mit einem statischen Linux/amd64-Programm für den x86-64-Basissatz (`GOAMD64=v1`). Weitere NAS-Modelle benötigen einen Praxistest; ARM ist in diesem Paket nicht enthalten. Das Paket ist unsigniert und hat kein BETA-Flag.
 
 ## Installation und erste Verwendung
 
