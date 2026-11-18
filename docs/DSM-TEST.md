@@ -61,6 +61,8 @@ Diese Abnahme verwendet die Paketkennung `h5uSynoWake` mit dem sichtbaren Namen 
 | Paket wieder starten | Der Zeitplan kann wieder ausführen. |
 | NAS neu starten | Paket und registrierte Aufgaben arbeiten nach dem Start weiter. |
 | Paket aktualisieren | Geräte, Zeitpläne und Protokoll bleiben erhalten; Aufgaben werden nicht dupliziert. |
+| Im sichtbaren Inhalt eines überlagerten SynoWake-Fensters klicken | SynoWake kommt nach vorn; Schaltflächen und Eingabefelder bleiben bedienbar. Nach Schließen und erneutem Öffnen ebenfalls prüfen. |
+| Paket aktualisieren und DSM neu laden | DSM lädt `SynoWake.js` mit der neuen Paketversion als Cache-Kennung. Der neue Fensterrahmen ist aktiv. |
 | Alle SynoWake-Zeitpläne entfernen | Zugehörige Aufgaben verschwinden auch aus dem DSM-Aufgabenplaner. |
 | Paket anschließend deinstallieren | Kein SynoWake-Programmpfad und keine zugehörige Aufgabe bleiben zur Ausführung registriert. |
 

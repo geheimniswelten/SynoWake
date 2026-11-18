@@ -163,6 +163,13 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
     binary = binary_path.read_bytes()
     check_binary(binary)
     package_root = ROOT / "package"
+    info = normalized(package_root / "INFO").decode("utf-8").rstrip() + "\n"
+    if re.search(r'^checksum=', info, re.MULTILINE):
+        raise ValueError("INFO checksum is calculated at build time; remove it from the template")
+    package_name = re.search(r'^package="([^"\r\n]+)"$', info, re.MULTILINE).group(1)
+    version = re.search(r'^version="([\d._-]+)"$', info, re.MULTILINE).group(1)
+    arch = re.search(r'^arch="([a-zA-Z0-9_]+)"$', info, re.MULTILINE).group(1)
+    dsm_min = re.search(r'^os_min_ver="([\d.-]+)"$', info, re.MULTILINE).group(1)
     privilege = json.loads(normalized(package_root / "conf" / "privilege"))
     if privilege != {"defaults": {"run-as": "package"}}:
         raise ValueError("SynoWake must use package privileges only: no executable/tool overrides, setuid or capabilities")
@@ -188,7 +195,11 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
                     raise ValueError(f"Duplicate package asset: {name}")
                 content = normalized(path)
                 if name == "ui/config":
-                    json.loads(content)
+                    config = json.loads(content)
+                    for definitions in config.values():
+                        for application in definitions.values():
+                            application["version"] = version
+                    content = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
                 payload[name] = (content, 0o644)
     payload["ui/api.cgi"] = (binary, 0o755)
     payload["bin/synowake"] = (binary, 0o755)
@@ -198,14 +209,7 @@ def build(binary_path: Path, output_path: Path | None) -> Path:
             raise ValueError(f"Missing DSM icon: ui/images/icon_{size}.png; regenerate with --icons")
     compressed = gzip_bytes(tar_bytes(payload))
 
-    info = normalized(package_root / "INFO").decode("utf-8").rstrip() + "\n"
-    if re.search(r'^checksum=', info, re.MULTILINE):
-        raise ValueError("INFO checksum is calculated at build time; remove it from the template")
     info += f'checksum="{hashlib.md5(compressed).hexdigest()}"\n'
-    package_name = re.search(r'^package="([^"\r\n]+)"$', info, re.MULTILINE).group(1)
-    version = re.search(r'^version="([\d._-]+)"$', info, re.MULTILINE).group(1)
-    arch = re.search(r'^arch="([a-zA-Z0-9_]+)"$', info, re.MULTILINE).group(1)
-    dsm_min = re.search(r'^os_min_ver="([\d.-]+)"$', info, re.MULTILINE).group(1)
     for name, references in {
         "ui/index.html": ("assets/synowake.css", "app.js"),
         "ui/app.js": ("./scheduler.js", "./i18n.js"),

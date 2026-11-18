@@ -197,7 +197,7 @@ async function run() {
   const deviceId = 'a'.repeat(32);
   const scheduleId = 'b'.repeat(32);
   const command = `'bin/synowake' '--run-schedule' '${scheduleId}' '--token' '${'c'.repeat(64)}'`;
-  const data = {user: 'tester', version: '1.1.1-0019', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
+  const data = {user: 'tester', version: '1.1.2-0020', csrf: 'csrf-test', active: true, devices: [{id: deviceId, name: 'Arbeitsrechner', ip: '192.168.1.20', mac: 'A0:B1:C2:D3:E4:01', broadcast: '192.168.1.255', port: 9, favorite: true}], schedules: [], pendingSchedules: [], logs: [], diagnostics: [], settings: {logCenterPort: 0}};
   const networks = [
     {interface: 'eth0', ip: '192.167.178.21', cidr: '192.167.178.0/24', searchCidr: '192.167.178.0/24', broadcast: '192.167.178.255'},
     {interface: 'eth1', ip: '10.42.0.130', cidr: '10.42.0.128/25', searchCidr: '10.42.0.128/25', broadcast: '10.42.0.255'}
@@ -297,7 +297,7 @@ async function run() {
   });
   await production.goto(base);
   const assetRequests = await production.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name));
-  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=1.1.1-0019`)), `Cache version missing for ${asset}`);
+  for (const asset of ['app.js', 'scheduler.js', 'i18n.js', 'translations.js', 'assets/synowake.css']) assert.ok(assetRequests.some(url => url.endsWith(`${asset}?v=1.1.2-0020`)), `Cache version missing for ${asset}`);
   await production.locator('.status.offline').first().waitFor();
   statusReply = {devices: [{id: deviceId, status: 'unknown', probeMethod: 'tcp', error: 'Keine TCP-Antwort. Status unbekannt.'}]};
   await production.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));

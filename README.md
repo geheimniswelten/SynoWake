@@ -6,7 +6,9 @@ Wake-on-LAN-Anwendung für Synology-NAS der Plattformfamilie **x86_64** ab DSM *
 
 Die Oberfläche öffnet ein kleines DSM-Anwendungsfenster. Sie bietet Gerätekacheln mit Schnellauswahl, eine bearbeitbare Geräteliste mit Netzwerksuche und einen Tab für Zeitpläne mit Ausführungsprotokoll. Zeitpläne werden über die vorhandene DSM-Sitzung in `SYNO.Core.TaskScheduler` angelegt, geändert und gelöscht. Die Anwendung schreibt weder `/etc/crontab` noch `task_config.xml`.
 
-**Aktuelle Paketversion:** `1.1.1-0019`.
+**Aktuelle Paketversion:** `1.1.2-0020`.
+
+**Version 1.1.2-0020:** Ein Linksklick im Fensterinhalt holt SynoWake im DSM nach vorn. Der Builder versieht zusätzlich die DSM-Fensterdefinitionen mit der Paketversion, damit DSM den Fensterrahmen nach Updates unter einer neuen Cache-Kennung lädt. Nach diesem Update DSM einmal vollständig neu laden und SynoWake erneut öffnen.
 
 **Version 1.1.0-0018:** Geräte können über einen eigenen Wecklink aus dem lokalen Netz aufgeweckt werden, etwa per Shelly-Taster oder Home Assistant.
 
@@ -82,7 +84,10 @@ Den gesamten Oberflächenablauf einschließlich Favoriten, Geräteübernahme und
 
 Das Paket verwendet Synologys [Plattformfamilie `x86_64`](https://help.synology.com/developer-guide/toolkit/pack_stage.html). Sie umfasst auch `apollolake` (DS918+). Die Mindestversion bleibt `7.1-42661`. Der Build erzeugt `h5uSynoWake-<Version>-x86_64.spk` mit einem statischen Linux/amd64-Programm für den x86-64-Basissatz (`GOAMD64=v1`). Weitere NAS-Modelle benötigen einen Praxistest; ARM ist in diesem Paket nicht enthalten. Das Paket ist unsigniert und hat kein BETA-Flag.
 
+`node tests/window-focus.cjs` prüft die Fensteraktivierung und das Entfernen der Listener beim Neuladen oder Schließen. Nach einem Build prüft `python tests/check-package-version.py` die gepackten DSM-Versionskennungen über zwei Paketversionen sowie reproduzierbare Archive.
+
 ## Installation und erste Verwendung
+
 
 **Wechsel der Paketkennung:** DSM behandelt `h5uSynoWake` als eigenes Paket; eine vorhandene Installation mit der Kennung `SynoWake` wird nicht automatisch aktualisiert. Daten und DSM-Aufgaben werden nicht automatisch übernommen. Benötigte Daten zuerst sichern, dann die alten Zeitpläne in der bisherigen Anwendung entfernen und das alte Paket deinstallieren. Geräte und Zeitpläne anschließend im neuen Paket wieder anlegen. Die Paketkennung bestimmt die Identität und das Paketverzeichnis laut [Synology-INFO-Dokumentation](https://help.synology.com/developer-guide/synology_package/INFO_necessary_fields.html).
 

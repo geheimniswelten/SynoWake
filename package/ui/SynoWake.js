@@ -24,9 +24,43 @@ Ext.define("SYNO.SDS.h5uSynoWake.MainWindow", {
             resizable: true,
             maximizable: true,
             minimizable: true,
-            html: '<iframe title="SynoWake" src="/webman/3rdparty/h5uSynoWake/index.html?v=1.1.1-0019" ' +
+            html: '<iframe class="synowake-frame" title="SynoWake" src="/webman/3rdparty/h5uSynoWake/index.html?v=1.1.2-0020" ' +
                 'style="display:block;width:100%;height:100%;border:0" ' +
                 'referrerpolicy="same-origin"></iframe>'
         }, options));
+    },
+    afterRender: function () {
+        SYNO.SDS.h5uSynoWake.MainWindow.superclass.afterRender.apply(this, arguments);
+        const frame = this.body.dom.querySelector('.synowake-frame');
+        if (!frame) return;
+
+        let frameDocument = null;
+        const activate = event => {
+            if (event.button === 0) {
+                // DSM needs a target in its desktop document, not inside the iframe.
+                this.toFront({getTarget: () => frame});
+            }
+        };
+        const bindFrame = () => {
+            frameDocument?.removeEventListener('pointerdown', activate, true);
+            frameDocument = null;
+            try {
+                frameDocument = frame.contentDocument;
+                frameDocument?.addEventListener('pointerdown', activate, true);
+            } catch (_) {
+                // A redirect or navigation may temporarily make the iframe inaccessible.
+            }
+        };
+        frame.addEventListener('load', bindFrame);
+        bindFrame();
+        this.removeFrameListeners = () => {
+            frame.removeEventListener('load', bindFrame);
+            frameDocument?.removeEventListener('pointerdown', activate, true);
+            frameDocument = null;
+        };
+    },
+    beforeDestroy: function () {
+        this.removeFrameListeners?.();
+        SYNO.SDS.h5uSynoWake.MainWindow.superclass.beforeDestroy.apply(this, arguments);
     }
 });

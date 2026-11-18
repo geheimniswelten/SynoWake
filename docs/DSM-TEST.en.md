@@ -61,6 +61,8 @@ This acceptance run uses package ID `h5uSynoWake` with the visible name **SynoWa
 | Restart the package | Schedules can run again. |
 | Reboot the NAS | Package and registered tasks work after startup. |
 | Upgrade the package | Devices, favorites, schedules and logs remain; tasks are not duplicated. |
+| Click visible content in an overlapped SynoWake window | SynoWake comes to the front; buttons and inputs remain usable. Check again after closing and reopening. |
+| Upgrade the package and reload DSM | DSM loads `SynoWake.js` using the new package version as its cache key. The updated window wrapper is active. |
 | Remove all SynoWake schedules | Corresponding DSM tasks disappear. |
 | Uninstall afterward | No SynoWake executable path or associated task remains registered for execution. |
 

@@ -1,4 +1,4 @@
-import {english} from './translations.js?v=1.1.1-0019';
+import {english} from './translations.js?v=1.1.2-0020';
 
 export function normalizeLanguage(value) {
   return /^(de(?:[-_].*)?|ger|german)$/i.test(String(value || '')) ? 'de' : 'en';

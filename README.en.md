@@ -6,7 +6,9 @@ Wake-on-LAN application for Synology NAS in the **x86_64** platform family runni
 
 The application opens in a DSM window with favorite device tiles, a searchable device list and an automation tab with execution logs. Schedules are created, edited and deleted through the existing DSM session using `SYNO.Core.TaskScheduler`. SynoWake does not modify `/etc/crontab` or `task_config.xml`.
 
-**Current package version:** `1.1.1-0019`.
+**Current package version:** `1.1.2-0020`.
+
+**Version 1.1.2-0020:** A left click inside the application brings its DSM window to the front. The builder also stamps the DSM window definitions with the package version so updates use a new cache key for the window script. Fully reload DSM once after this update and reopen SynoWake.
 
 **Version 1.1.0-0018:** Devices can be woken via individual wake links from the local network, for example from a Shelly button or Home Assistant.
 
@@ -65,6 +67,8 @@ The builder validates a static Linux/amd64 ELF, produces an unsigned SPK and SHA
 Run `go test ./cmd/... ./internal/...`, `node tests/scheduler.cjs`, `node tests/i18n.cjs` and `python tests/check-i18n.py`. The backend tests cover packet count/spacing, one execution record, concurrent language requests and unchanged names. The shared catalog is `internal/synowake/translations.json`: Go embeds it and the builder exports `ui/translations.js`. Build checks enforce matching template parameters and versioned language-module URLs.
 
 `node tests/workflow.cjs` uses Playwright to test German and English workflows, favorite management, device import, simulated DSM API/session responses, recovery and mobile layout. Set `PLAYWRIGHT_MODULE` to the installed library and `BROWSER_EXECUTABLE` to Chromium or Edge if needed. Screenshots and CSS results are written under `work/`. `node scripts/test-ui.mjs` serves the CSS regression page for manual Firefox verification; the legacy fixture is never included in the SPK.
+
+`node tests/window-focus.cjs` checks window activation and listener cleanup on navigation or closing. After a build, `python tests/check-package-version.py` checks packaged DSM version keys across two package versions and reproducible archives.
 
 ## Installation and first use
 
